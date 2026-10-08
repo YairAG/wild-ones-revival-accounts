@@ -1,6 +1,7 @@
-// Documento inicial del jugador en la colección "users", con el formato que espera el servidor de juego
-// (ver docs/CUENTAS.md en Wild-Ones-Revival). Los valores iniciales son decisiones de diseño: ajústalos aquí.
-export function newPlayer(id: number, dname: string) {
+// Jugador recién registrado. Los valores iniciales son decisiones de diseño del juego: se ajustan aquí.
+import type { Player } from "../../types";
+
+export function newPlayer(id: number, dname: string): Player {
   return {
     id,
     dname,

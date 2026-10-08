@@ -2,7 +2,11 @@
 import { randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
-const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, length: number) => Promise<Buffer>;
+const scryptAsync = promisify(scrypt) as (
+  password: string,
+  salt: Buffer,
+  length: number,
+) => Promise<Buffer>;
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
