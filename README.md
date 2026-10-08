@@ -1,6 +1,6 @@
 # wildones-accounts
 
-Backend de cuentas de Wild Ones Revival (privado). Registra jugadores, verifica contraseñas y entrega el JWT
+Backend de cuentas de Wild Ones Revival. Registra jugadores, verifica contraseñas y entrega el JWT
 con el que el frontend entra al [servidor de juego](https://github.com/YairAG/Wild-Ones-Revival). Cumple el
 contrato de [docs/CUENTAS.md](https://github.com/YairAG/Wild-Ones-Revival/blob/develop/docs/CUENTAS.md).
 
