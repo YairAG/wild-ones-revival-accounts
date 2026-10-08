@@ -2,7 +2,7 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { buildApp } from "../../src/app";
 import { connectMongo } from "../../src/db/mongo";
-import type { Config } from "../../src/types";
+import type { Config } from "../../src/config/env";
 
 process.env.LOG_LEVEL = "silent"; // sin logs del servidor en la salida de los tests
 

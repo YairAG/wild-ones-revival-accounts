@@ -1,6 +1,14 @@
 // Lee el .env y lo valida al arrancar: si falta algo obligatorio, el backend no arranca.
 import { z } from "zod";
-import type { Config } from "../types";
+
+export type Config = {
+  port: number;
+  mongoUrl: string;
+  jwtSecret: string; // el mismo JWT_SECRET que el servidor de juego
+  jwtExpiresIn: string; // p. ej. "10m": el token solo se usa al hacer logIn
+  corsOrigin: string; // URL del frontend
+  requestsPerMinute: number; // límite de intentos por IP
+};
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),

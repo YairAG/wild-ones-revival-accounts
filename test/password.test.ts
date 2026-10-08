@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hashPassword, verifyPassword } from "../src/shared/password";
+import { hashPassword, verifyPassword } from "../src/modules/auth/password";
 
 test("hash y verificación de contraseñas", async () => {
   const stored = await hashPassword("clave-segura");

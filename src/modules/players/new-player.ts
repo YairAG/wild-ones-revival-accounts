@@ -1,5 +1,5 @@
 // Jugador recién registrado. Los valores iniciales son decisiones de diseño del juego: se ajustan aquí.
-import type { Player } from "../../types";
+import type { Player } from "./types";
 
 export function newPlayer(id: number, dname: string): Player {
   return {

@@ -1,16 +1,11 @@
-// Arma la aplicación: plugins, manejo de errores y módulos. Cada módulo recibe solo lo que necesita.
+// Arma la aplicación: plugins, manejo de errores y módulos.
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import type { Db } from "mongodb";
-import { nextId } from "./db/counters";
+import type { Config } from "./config/env";
 import { AppError } from "./shared/errors";
-import { createTokens } from "./shared/tokens";
-import { createAccountsRepository } from "./modules/accounts/accounts.repository";
-import { createPlayersRepository } from "./modules/players/players.repository";
-import { createAuthService } from "./modules/auth/auth.service";
-import { authRoutes } from "./modules/auth/auth.routes";
-import type { Config } from "./types";
+import { authModule } from "./modules/auth";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
@@ -23,13 +18,8 @@ export async function buildApp(db: Db, config: Config) {
     return reply.send(err);
   });
 
-  const auth = createAuthService({
-    accounts: createAccountsRepository(db),
-    players: createPlayersRepository(db),
-    tokens: createTokens(config),
-    nextUserId: () => nextId(db, "userId"),
-  });
-  authRoutes(app, auth);
+  // Módulos
+  authModule(app, { db, config });
 
   return app;
 }

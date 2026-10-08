@@ -26,32 +26,37 @@ contrato de [docs/CUENTAS.md](https://github.com/YairAG/Wild-Ones-Revival/blob/d
 
 ## Estructura
 
-Arquitectura en capas, organizada por módulos. Cada capa solo habla con la de abajo:
+Organizado **por funcionalidad**: cada carpeta de `src/modules/` tiene todo lo de una función (rutas,
+lógica, acceso a Mongo y tipos). Para entender el registro basta con abrir `register.ts`.
 
 ```
-rutas (HTTP)  →  servicio (lógica)  →  repositorios (Mongo)
+src/
+  server.ts            punto de entrada: lee el .env, conecta a Mongo, abre el puerto
+  app.ts               arma la app: CORS, límite de intentos, errores y módulos
+  config/env.ts        lee y valida el .env (si falta algo obligatorio, no arranca)
+  db/                  conexión, índices e ids numéricos consecutivos
+  shared/              errores (AppError), validación con zod, tipo ModuleDeps
+  modules/
+    auth/              registrarse y entrar
+      index.ts           registra las rutas del módulo
+      register.ts        POST /register, de principio a fin
+      login.ts           POST /login, de principio a fin
+      accounts.ts        colección accounts (credenciales)
+      password.ts        hash de contraseñas (scrypt)
+      token.ts           JWT para el servidor de juego
+      schemas.ts         validación del body
+      types.ts           Account, Session
+    players/           el jugador del juego
+      new-player.ts      jugador inicial: los valores iniciales se ajustan aquí
+      players.ts         colección users
+      types.ts           Player, Pet
+test/                  tests (helpers/setup.ts arranca la app con un Mongo temporal)
 ```
 
-| Archivo | Qué hace |
-|---|---|
-| `src/server.ts` | Punto de entrada: lee el `.env`, conecta a Mongo, abre el puerto |
-| `src/app.ts` | Arma la app: CORS, límite de intentos, manejo de errores y módulos |
-| `src/config/env.ts` | Lee y valida el `.env` (si falta algo obligatorio, no arranca) |
-| `src/db/mongo.ts` | Conexión a Mongo e índices |
-| `src/db/counters.ts` | Ids numéricos consecutivos |
-| `src/modules/auth/auth.routes.ts` | Capa HTTP: `/register` y `/login` |
-| `src/modules/auth/auth.service.ts` | Lógica de registro y login (no sabe de HTTP) |
-| `src/modules/auth/auth.schemas.ts` | Validación del body (zod) |
-| `src/modules/accounts/accounts.repository.ts` | Colección `accounts` |
-| `src/modules/players/players.repository.ts` | Colección `users` |
-| `src/modules/players/new-player.ts` | Jugador inicial (oro, mascota, armas…). **Los valores iniciales se ajustan aquí** |
-| `src/shared/` | Piezas comunes: errores (`AppError`), contraseñas (scrypt), tokens (JWT), validación |
-| `src/types/` | Tipos compartidos, uno por tema: config, cuenta, jugador, sesión |
-| `test/` | Tests (`helpers/setup.ts` arranca la app con un Mongo temporal) |
-
-**Para agregar algo nuevo** (p. ej. cambiar contraseña): el esquema va en `auth.schemas.ts`, la lógica en
-`auth.service.ts`, la ruta en `auth.routes.ts`, y se agrega su test. Un módulo nuevo va en
-`src/modules/<nombre>/` con esos mismos tres archivos, y se registra en `app.ts`.
+**Para agregar algo nuevo:**
+- A una función que ya existe (p. ej. cambiar contraseña): `modules/auth/change-password.ts`, registrada en
+  `modules/auth/index.ts`, más su test.
+- Una función nueva (p. ej. ranking): carpeta `modules/ranking/` con su `index.ts`, y una línea en `app.ts`.
 
 ## Datos en Mongo
 
