@@ -9,8 +9,9 @@ import { authModule } from "./modules/auth";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
-  await app.register(cors, { origin: config.corsOrigin });
-  await app.register(rateLimit, { max: config.requestsPerMinute, timeWindow: "1 minute" });
+  await app.register(cors, { origin: config.corsOrigin, methods: ["GET", "POST", "DELETE"] });
+  // El límite de intentos se activa por ruta (solo /login y /register, contra fuerza bruta)
+  await app.register(rateLimit, { global: false });
 
   // Errores esperados (AppError) → { error: "mensaje" } con su código. El resto lo maneja Fastify
   app.setErrorHandler((err, _req, reply) => {

@@ -2,6 +2,7 @@
 import type { FastifyInstance } from "fastify";
 import { nextId } from "../../db/counters";
 import { AppError } from "../../shared/errors";
+import { attemptsLimit } from "./attempts-limit";
 import type { ModuleDeps } from "../../shared/module";
 import { parseBody } from "../../shared/validation";
 import { newPlayer } from "../players/new-player";
@@ -13,7 +14,7 @@ import { signToken } from "./token";
 import type { Session } from "./types";
 
 export function registerRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
-  app.post("/register", async (req, reply) => {
+  app.post("/register", attemptsLimit(config), async (req, reply) => {
     const { dname, password } = parseBody(credentialsSchema, req.body);
 
     const id = await nextId(db, "userId");

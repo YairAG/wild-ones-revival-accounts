@@ -1,6 +1,7 @@
 // POST /login: verifica nombre y contraseña, y devuelve un token para entrar al juego.
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../shared/errors";
+import { attemptsLimit } from "./attempts-limit";
 import type { ModuleDeps } from "../../shared/module";
 import { parseBody } from "../../shared/validation";
 import { findAccountByName } from "./accounts";
@@ -10,7 +11,7 @@ import { signToken } from "./token";
 import type { Session } from "./types";
 
 export function loginRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
-  app.post("/login", async (req) => {
+  app.post("/login", attemptsLimit(config), async (req) => {
     const { dname, password } = parseBody(credentialsSchema, req.body);
 
     const account = await findAccountByName(db, dname);
