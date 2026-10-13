@@ -143,8 +143,8 @@ test("moderación: solo un moderador borra mensajes (para todos) y silencia juga
   assert.deepEqual(await moni.next(), { type: "error", error: "Ese mensaje ya no existe" });
 
   // Silenciar aplica aunque Dani ya esté conectado
-  moni.send({ type: "mute", userId: message.userId, minutes: 60 });
-  assert.deepEqual(await moni.next(), { type: "notice", text: "Silenciado 60 min" });
+  moni.send({ type: "mute", userId: message.userId, minutes: 60, reason: "spam repetido" });
+  assert.deepEqual(await moni.next(), { type: "notice", text: "Dani silenciado 1 h" });
   await new Promise((resolve) => setTimeout(resolve, 2_000)); // el límite de 1 mensaje cada 2 s
   dani.send({ type: "send", text: "sigo aquí" });
   assert.deepEqual(await dani.next(), { type: "error", error: "Estás silenciado 60 min más" });
@@ -180,4 +180,37 @@ test("si el filtro cambia el texto, solo los moderadores reciben el original", a
   assert.equal(later.history?.at(-1)?.original, undefined);
   assert.equal(mod.history?.at(-1)?.original, "eres un pendejo");
   for (const c of [moni, ana, later, mod]) c.ws.terminate();
+});
+
+test("panel de moderación: silenciados, registro y quitar silencio (solo moderadores)", async () => {
+  // Viene del test de moderación: Moni borró el "spam" de Dani y lo silenció 1 h
+  const dani = (await t.db.collection("accounts").findOne({ dname: "Dani" }))!.userId;
+  assert.equal((await t.call("GET", "/chat/moderation")).statusCode, 401);
+  const notMod = await t.call("GET", "/chat/moderation", token.Ana);
+  assert.equal(notMod.statusCode, 403);
+  assert.deepEqual(notMod.json(), { error: "Solo los moderadores pueden hacer eso" });
+
+  const summary = (await t.call("GET", "/chat/moderation", token.Moni)).json();
+  assert.deepEqual(
+    summary.muted.map((m: { dname: string }) => m.dname),
+    ["Dani"],
+  );
+  const [mute, del] = summary.log; // la más nueva primero
+  assert.equal(mute.action, "mute");
+  assert.equal(mute.mod.dname, "Moni");
+  assert.deepEqual(mute.target, { id: dani, dname: "Dani" });
+  assert.equal(mute.minutes, 60);
+  assert.equal(mute.reason, "spam repetido");
+  assert.equal(del.action, "delete");
+  assert.equal(del.text, "spam");
+  assert.equal(del.minutes, undefined);
+
+  assert.equal((await t.call("DELETE", `/chat/mutes/${dani}`, token.Ana)).statusCode, 403);
+  assert.equal((await t.call("DELETE", `/chat/mutes/${dani}`, token.Moni)).statusCode, 204);
+  const again = await t.call("DELETE", `/chat/mutes/${dani}`, token.Moni);
+  assert.equal(again.statusCode, 404);
+
+  const after = (await t.call("GET", "/chat/moderation", token.Moni)).json();
+  assert.deepEqual(after.muted, []);
+  assert.equal(after.log[0].action, "unmute");
 });

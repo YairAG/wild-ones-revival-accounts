@@ -24,11 +24,10 @@ export async function saveMessage(db: Db, message: StoredMessage): Promise<Store
   return { ...message, _id: insertedId };
 }
 
-/** Borra un mensaje por su id. Devuelve false si no existe */
-export async function deleteMessage(db: Db, id: string): Promise<boolean> {
-  if (!ObjectId.isValid(id)) return false;
-  const { deletedCount } = await messages(db).deleteOne({ _id: new ObjectId(id) });
-  return deletedCount === 1;
+/** Borra un mensaje por su id. Devuelve el mensaje borrado, o null si no existe */
+export function deleteMessage(db: Db, id: string): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(id)) return Promise.resolve(null);
+  return messages(db).findOneAndDelete({ _id: new ObjectId(id) });
 }
 
 /** Los últimos `limit` mensajes, del más viejo al más nuevo */

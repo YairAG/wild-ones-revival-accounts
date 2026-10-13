@@ -20,6 +20,29 @@ export type ChatMessage = {
   at: string; // fecha ISO
 };
 
+/** Un jugador, por id y nombre */
+export type PlayerRef = { id: number; dname: string };
+
+/** Acción de un moderador (colección "moderation_log") */
+export type LoggedAction = {
+  at: Date;
+  mod: PlayerRef; // quién la hizo
+  action: "delete" | "mute" | "unmute";
+  target: PlayerRef; // a quién (el autor del mensaje borrado, el silenciado...)
+  text?: string; // el mensaje borrado (el original si el filtro lo había cambiado)
+  minutes?: number; // duración del silencio
+  reason?: string; // motivo del silencio
+};
+
+/** Una acción en el panel de moderación (como LoggedAction, con la fecha en ISO) */
+export type ModerationLogEntry = Omit<LoggedAction, "at"> & { at: string };
+
+/** Respuesta de GET /chat/moderation */
+export type ModerationSummary = {
+  muted: (PlayerRef & { until: string })[]; // silenciados ahora
+  log: ModerationLogEntry[]; // las últimas acciones, la más nueva primero
+};
+
 /** Lo que el servidor manda por el WebSocket */
 export type ChatServerEvent =
   // Al entrar: los últimos mensajes, del más viejo al más nuevo, y si puedes moderar

@@ -20,13 +20,25 @@ export function findAccountById(db: Db, userId: number): Promise<Account | null>
   return accounts(db).findOne({ userId });
 }
 
-/** Silencia en el chat hasta `until`. Devuelve false si la cuenta no existe */
-export async function muteAccount(db: Db, userId: number, until: Date): Promise<boolean> {
-  const { matchedCount } = await accounts(db).updateOne(
-    { userId },
-    { $set: { mutedUntil: until } },
+/** Silencia en el chat hasta `until`. Devuelve la cuenta, o null si no existe */
+export function muteAccount(db: Db, userId: number, until: Date): Promise<Account | null> {
+  return accounts(db).findOneAndUpdate({ userId }, { $set: { mutedUntil: until } });
+}
+
+/** Quita el silencio. Devuelve la cuenta, o null si no estaba silenciada */
+export function unmuteAccount(db: Db, userId: number): Promise<Account | null> {
+  return accounts(db).findOneAndUpdate(
+    { userId, mutedUntil: { $gt: new Date() } },
+    { $unset: { mutedUntil: "" } },
   );
-  return matchedCount === 1;
+}
+
+/** Cuentas silenciadas ahora, la que termina antes primero */
+export function listMuted(db: Db): Promise<Account[]> {
+  return accounts(db)
+    .find({ mutedUntil: { $gt: new Date() } })
+    .sort({ mutedUntil: 1 })
+    .toArray();
 }
 
 /** Busca por nombre sin importar mayúsculas */

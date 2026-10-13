@@ -24,5 +24,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       .int()
       .min(1)
       .max(7 * 24 * 60, "Máximo una semana"),
+    reason: z.string().trim().max(100, "Motivo de 100 caracteres como máximo").optional(),
   }),
 ]);

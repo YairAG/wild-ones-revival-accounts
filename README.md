@@ -50,7 +50,7 @@ cliente es el token (no va en la URL para que no quede en los logs):
 | `{ "type": "auth", "token": "..." }` | Entrar. Responde `history`, o `error` y cierra si el token no sirve |
 | `{ "type": "send", "text": "hola" }` | Escribir: 1 a 200 caracteres, uno cada 2 s por jugador |
 | `{ "type": "delete", "id": "..." }` | Moderadores: borrar un mensaje |
-| `{ "type": "mute", "userId": 3, "minutes": 60 }` | Moderadores: silenciar a un jugador (máximo una semana) |
+| `{ "type": "mute", "userId": 3, "minutes": 60, "reason": "spam" }` | Moderadores: silenciar a un jugador (máximo una semana; `reason` opcional) |
 
 | Servidor → cliente | Cuándo |
 |---|---|
@@ -63,8 +63,22 @@ cliente es el token (no va en la URL para que no quede en los logs):
 - Las groserías de la lista de `src/modules/chat/filter.ts` se reemplazan por `***`. Si el texto cambió, se
   guarda también el original, que solo reciben los moderadores (campo `original` del mensaje).
 - Los mensajes se guardan en la colección `chat_messages`.
+- Cada borrado, silencio y quitar silencio queda en la colección `moderation_log`.
 - Hacer moderador a alguien (en `mongosh`): `db.accounts.updateOne({ dname: "Ana" }, { $set: { role: "mod" } })`.
   Toma efecto la próxima vez que entre al chat.
+
+#### Panel de moderación
+
+Solo moderadores, con el `token` en `Authorization` (`401` sin sesión, `403` si no eres moderador).
+
+| Ruta | Respuesta |
+|---|---|
+| `GET /chat/moderation` | `200 { muted, log }` |
+| `DELETE /chat/mutes/:id` | `204` (le quita el silencio) · `404` no está silenciado |
+
+- `muted`: `[{ id, dname, until }]`, los silenciados ahora (el que termina antes primero).
+- `log`: las últimas 50 acciones, la más nueva primero: `{ at, mod, action, target, text?, minutes?, reason? }`.
+  `action` es `"delete"`, `"mute"` o `"unmute"`; `mod` y `target` son `{ id, dname }`; `text` es el mensaje borrado.
 
 ## Estructura
 
@@ -105,6 +119,8 @@ src/
     chat/              chat global por WebSocket
       index.ts           GET /chat: entrar, escribir, moderar y repartir los mensajes
       messages.ts        colección chat_messages
+      moderation.ts      rutas del panel de moderación
+      moderation-log.ts  colección moderation_log
       filter.ts          filtro de groserías
       schemas.ts         validación de lo que manda el cliente
       types.ts           ChatMessage, ChatServerEvent
