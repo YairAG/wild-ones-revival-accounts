@@ -8,9 +8,19 @@ export type Account = {
   mutedUntil?: Date; // silenciado en el chat hasta esta fecha
 };
 
-/** Lo que devuelven /register y /login */
+/** Lo que devuelven /register, /login y /refresh (el refresh token va aparte, en la cookie httpOnly) */
 export type Session = {
   id: number;
   dname: string;
-  token: string; // JWT para entrar al servidor de juego
+  token: string; // JWT de acceso: para las rutas con sesión, el chat y el servidor de juego. Dura poco
+};
+
+/** Sesión iniciada en un navegador (colección "sessions"). Ver sessions.ts */
+export type RefreshSession = {
+  userId: number;
+  tokenHash: string; // sha256 del refresh token vigente
+  previousHash?: string; // el de antes de la última rotación (para la gracia entre pestañas)
+  rotatedAt?: Date;
+  expiresAt: Date; // Mongo borra la sesión al pasar esta fecha (índice TTL)
+  createdAt: Date;
 };

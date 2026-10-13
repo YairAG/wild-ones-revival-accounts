@@ -1,5 +1,6 @@
 // Arma la aplicación: plugins, manejo de errores y módulos.
 import Fastify, { type FastifyError, type FastifyReply } from "fastify";
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
@@ -13,7 +14,13 @@ import { friendsModule } from "./modules/friends";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
-  await app.register(cors, { origin: config.corsOrigin, methods: ["GET", "POST", "DELETE"] });
+  // credentials: el navegador manda y guarda la cookie de sesión (solo desde corsOrigin, nunca "*")
+  await app.register(cors, {
+    origin: config.corsOrigin,
+    methods: ["GET", "POST", "DELETE"],
+    credentials: true,
+  });
+  await app.register(cookie);
   // El límite de intentos se activa por ruta (solo /login y /register, contra fuerza bruta)
   await app.register(rateLimit, { global: false });
   await app.register(websocket); // para el chat

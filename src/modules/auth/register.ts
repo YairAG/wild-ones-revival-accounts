@@ -1,4 +1,4 @@
-// POST /register: crea la cuenta y el jugador, y devuelve un token para entrar al juego.
+// POST /register: crea la cuenta y el jugador, abre la sesión (cookie) y devuelve el token de acceso.
 import type { FastifyInstance } from "fastify";
 import { nextId } from "../../db/counters";
 import { AppError } from "../../shared/errors";
@@ -11,8 +11,7 @@ import { createPlayer } from "../players/players";
 import { createAccount } from "./accounts";
 import { hashPassword } from "./password";
 import { credentialsSchema } from "./schemas";
-import { signToken } from "./token";
-import type { Session } from "./types";
+import { startSession } from "./session-cookie";
 
 export function registerRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
   app.post("/register", attemptsLimit(config), async (req, reply) => {
@@ -30,7 +29,11 @@ export function registerRoute(app: FastifyInstance, { db, config }: ModuleDeps):
     await createPlayer(db, newPlayer(id, dname));
     req.log.info({ id, dname }, "Cuenta creada");
 
-    const session: Session = { id, dname, token: signToken(config, id) };
-    return respond(reply, 201, "Cuenta creada", session);
+    return respond(
+      reply,
+      201,
+      "Cuenta creada",
+      await startSession(reply, db, config, { id, dname }),
+    );
   });
 }

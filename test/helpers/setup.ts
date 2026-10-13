@@ -10,7 +10,9 @@ export const testConfig: Config = {
   port: 0,
   mongoUrl: "",
   jwtSecret: "secreto-de-test",
-  jwtExpiresIn: "10m",
+  jwtExpiresIn: "15m",
+  refreshTokenDays: 30,
+  cookieSecure: false,
   corsOrigin: "*",
   requestsPerMinute: 1000,
 };

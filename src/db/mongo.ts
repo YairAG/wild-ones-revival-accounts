@@ -18,6 +18,10 @@ async function createIndexes(db: Db): Promise<void> {
   await db.collection("accounts").createIndex({ userId: 1 }, { unique: true }); // el chat busca por id
   await db.collection("users").createIndex({ id: 1 }, { unique: true });
   await db.collection("users").createIndex({ dname: 1 }, { unique: true });
+  // Sesiones (refresh tokens): se buscan por hash y Mongo borra solas las vencidas (índice TTL)
+  await db.collection("sessions").createIndex({ tokenHash: 1 }, { unique: true });
+  await db.collection("sessions").createIndex({ previousHash: 1 });
+  await db.collection("sessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   // Amigos: una relación por pareja, y búsqueda por quien envía o recibe
   await db.collection("friendships").createIndex({ pair: 1 }, { unique: true });
   await db.collection("friendships").createIndex({ from: 1 });

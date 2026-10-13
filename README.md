@@ -32,11 +32,24 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 |---|---|---|
 | `POST /register` | `{ "dname": "Ana", "password": "..." }` | `201` data `{ id, dname, token }` · `400` · `409 NAME_TAKEN` |
 | `POST /login` | `{ "dname": "Ana", "password": "..." }` | `200` data `{ id, dname, token }` · `401 WRONG_CREDENTIALS` (nombre o contraseña) |
+| `POST /refresh` | (cookie) | `200` data `{ id, dname, token }` · `401 SESSION_EXPIRED` |
+| `POST /logout` | (cookie) | `200` (cierra la sesión de este navegador) |
 
 - `dname`: 3 a 16 letras, números o `_`. Único sin importar mayúsculas ("Ana" = "ana").
 - `password`: mínimo 8 caracteres.
 - Límite (solo en estas dos rutas): `REQUESTS_PER_MINUTE` intentos por minuto y por IP (`429` si se pasa).
 - El `token` se manda al servidor de juego: `{"command":"logIn","token":"<token>"}`.
+
+### Sesión: token de acceso y refresh token
+
+- **Token de acceso** (`token` en el body): JWT corto (`JWT_EXPIRES_IN`, 15 min). Va en `Authorization`, al chat y al
+  servidor de juego. El frontend lo guarda solo en memoria.
+- **Refresh token**: lo pone `/register` y `/login` en la cookie `wr_refresh` (`httpOnly`, `SameSite=Strict`,
+  `Secure` con `COOKIE_SECURE=true`). El JavaScript de la página no puede leerla. Dura `REFRESH_TOKEN_DAYS` (30 días).
+- `/refresh` da un token de acceso nuevo y **rota** la cookie (el refresh token anterior deja de servir). Si dos
+  pestañas renuevan casi a la vez, la segunda puede usar el anterior durante 30 s.
+- En Mongo (colección `sessions`) solo se guarda el hash sha256 del refresh token; las vencidas se borran solas.
+- El frontend tiene que pedir con `credentials: "include"` para que el navegador mande y guarde la cookie.
 
 ### Amigos
 
@@ -111,6 +124,9 @@ src/
       index.ts           registra las rutas del módulo
       register.ts        POST /register, de principio a fin
       login.ts           POST /login, de principio a fin
+      refresh.ts         POST /refresh y POST /logout
+      sessions.ts        colección sessions (refresh tokens, solo su hash)
+      session-cookie.ts  la cookie httpOnly con el refresh token
       accounts.ts        colección accounts (credenciales)
       password.ts        hash de contraseñas (scrypt)
       token.ts           JWT para el servidor de juego (firmar y verificar)

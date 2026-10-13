@@ -1,4 +1,4 @@
-// POST /login: verifica nombre y contraseña, y devuelve un token para entrar al juego.
+// POST /login: verifica nombre y contraseña, abre la sesión (cookie) y devuelve el token de acceso.
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../shared/errors";
 import { attemptsLimit } from "./attempts-limit";
@@ -8,8 +8,7 @@ import { parseBody } from "../../shared/validation";
 import { findAccountByName } from "./accounts";
 import { verifyPassword } from "./password";
 import { credentialsSchema } from "./schemas";
-import { signToken } from "./token";
-import type { Session } from "./types";
+import { startSession } from "./session-cookie";
 
 export function loginRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
   app.post("/login", attemptsLimit(config), async (req, reply) => {
@@ -21,11 +20,10 @@ export function loginRoute(app: FastifyInstance, { db, config }: ModuleDeps): vo
       throw new AppError(401, "WRONG_CREDENTIALS", "Nombre o contraseña incorrectos");
     }
 
-    const session: Session = {
+    const session = await startSession(reply, db, config, {
       id: account.userId,
       dname: account.dname,
-      token: signToken(config, account.userId),
-    };
+    });
     return respond(reply, 200, "Sesión iniciada", session);
   });
 }
