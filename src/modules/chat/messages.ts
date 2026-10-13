@@ -41,3 +41,8 @@ export async function lastMessages(db: Db, limit: number, forMod: boolean): Prom
   const newest = await messages(db).find().sort({ _id: -1 }).limit(limit).toArray();
   return newest.reverse().map((m) => toChatMessage(m, forMod));
 }
+
+/** Borra los mensajes de un jugador (al eliminar su cuenta) */
+export async function deleteMessagesBy(db: Db, userId: number): Promise<void> {
+  await messages(db).deleteMany({ userId });
+}

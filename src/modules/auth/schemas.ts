@@ -9,3 +9,14 @@ export const credentialsSchema = z.object({
 });
 
 export type Credentials = z.infer<typeof credentialsSchema>;
+
+// Body de POST /account/password
+export const changePasswordSchema = z.object({
+  current: z.string().min(1, "Escribe tu contraseña actual"),
+  next: credentialsSchema.shape.password,
+});
+
+// Body de DELETE /account: se confirma con la contraseña
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Escribe tu contraseña para confirmar"),
+});

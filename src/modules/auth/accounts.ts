@@ -45,3 +45,11 @@ export function listMuted(db: Db): Promise<Account[]> {
 export function findAccountByName(db: Db, dname: string): Promise<Account | null> {
   return accounts(db).findOne({ dname }, { collation: ignoreCase });
 }
+
+export async function setPasswordHash(db: Db, userId: number, passwordHash: string): Promise<void> {
+  await accounts(db).updateOne({ userId }, { $set: { passwordHash } });
+}
+
+export async function deleteAccount(db: Db, userId: number): Promise<void> {
+  await accounts(db).deleteOne({ userId });
+}

@@ -51,6 +51,19 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 - En Mongo (colección `sessions`) solo se guarda el hash sha256 del refresh token; las vencidas se borran solas.
 - El frontend tiene que pedir con `credentials: "include"` para que el navegador mande y guarde la cookie.
 
+### Tu cuenta
+
+Piden sesión (`Authorization`); las que piden contraseña tienen el límite de intentos del login.
+
+| Ruta | Body | Respuesta |
+|---|---|---|
+| `POST /account/password` | `{ current, next }` | `200` (cierra tus otras sesiones; esta sigue) · `403 WRONG_PASSWORD` · `400` |
+| `POST /account/logout-others` | | `200` (cierra la sesión en los demás navegadores) |
+| `DELETE /account` | `{ password }` | `200` · `403 WRONG_PASSWORD` |
+
+Eliminar la cuenta borra la cuenta, el jugador, sus amistades, bloqueos, mensajes del chat y sesiones, y la cookie.
+Los reportes y el registro de moderación se quedan. El nombre queda libre.
+
 ### Amigos
 
 Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si falta o expiró).
@@ -158,6 +171,7 @@ src/
       register.ts        POST /register, de principio a fin
       login.ts           POST /login, de principio a fin
       refresh.ts         POST /refresh y POST /logout
+      account.ts         cambiar contraseña, cerrar otras sesiones, eliminar cuenta
       sessions.ts        colección sessions (refresh tokens, solo su hash)
       session-cookie.ts  la cookie httpOnly con el refresh token
       accounts.ts        colección accounts (credenciales)

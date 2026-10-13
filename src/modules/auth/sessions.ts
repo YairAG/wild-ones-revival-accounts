@@ -61,3 +61,9 @@ export async function rotateSession(
 export async function deleteSession(db: Db, token: string): Promise<void> {
   await sessions(db).deleteOne({ tokenHash: hash(token) });
 }
+
+/** Cierra todas las sesiones del jugador menos la del token `keep` (la de este navegador) */
+export async function deleteOtherSessions(db: Db, userId: number, keep?: string): Promise<number> {
+  const filter = keep ? { userId, tokenHash: { $ne: hash(keep) } } : { userId };
+  return (await sessions(db).deleteMany(filter)).deletedCount;
+}

@@ -38,3 +38,8 @@ export async function blockedEitherWay(db: Db, a: number, b: number): Promise<bo
 export async function blockedBy(db: Db, from: number): Promise<number[]> {
   return (await blocks(db).find({ from }).toArray()).map((b) => b.to);
 }
+
+/** Borra los bloqueos que hizo y los que le hicieron (al eliminar su cuenta) */
+export async function removeAllBlocksFor(db: Db, userId: number): Promise<void> {
+  await blocks(db).deleteMany({ $or: [{ from: userId }, { to: userId }] });
+}

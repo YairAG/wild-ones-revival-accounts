@@ -37,3 +37,7 @@ export function findPlayers(db: Db, ids: number[]) {
     .find({ id: { $in: ids } }, { projection: { _id: 0, id: 1, dname: 1, level: 1, presence: 1 } })
     .toArray() as Promise<Pick<Player, "id" | "dname" | "level" | "presence">[]>;
 }
+
+export async function deletePlayer(db: Db, id: number): Promise<void> {
+  await users(db).deleteOne({ id });
+}

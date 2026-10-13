@@ -60,3 +60,8 @@ export async function removeBetween(
   const result = await friendships(db).deleteOne({ pair: pairOf(a, b), status });
   return result.deletedCount === 1;
 }
+
+/** Borra todas las relaciones de un jugador (al eliminar su cuenta) */
+export async function removeAllFor(db: Db, userId: number): Promise<void> {
+  await friendships(db).deleteMany({ $or: [{ from: userId }, { to: userId }] });
+}

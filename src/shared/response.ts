@@ -16,6 +16,7 @@ export type ErrorId =
   | "LOGIN_REQUIRED" // 401: en el chat, escribir antes de mandar el token
   | "NOT_MOD" // 403: solo moderadores
   | "MUTED" // 403: silenciado en el chat
+  | "WRONG_PASSWORD" // 403: la contraseña que confirmó no es la suya
   | "BLOCKED" // 403: uno de los dos bloqueó al otro
   | "NOT_FOUND" // 404: la ruta no existe
   | "PLAYER_NOT_FOUND" // 404
