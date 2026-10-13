@@ -77,6 +77,25 @@ test("registro: datos inválidos dan 400 con un mensaje para mostrar", async () 
   assert.equal((await t.post("/register", {})).statusCode, 400);
 });
 
+test("nombre disponible: mismas reglas que el registro, sin importar mayúsculas", async () => {
+  const taken = await t.call("GET", "/register/available?dname=ANA");
+  assert.equal(taken.statusCode, 200);
+  assert.deepEqual(taken.json(), {
+    ok: true,
+    code: 200,
+    message: "Ese nombre ya existe",
+    data: { available: false },
+  });
+
+  const free = await t.call("GET", "/register/available?dname=Zoe_99");
+  assert.deepEqual(free.json().data, { available: true });
+
+  const invalid = await t.call("GET", "/register/available?dname=con%20espacio");
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.json().error, "INVALID_DATA");
+  assert.equal((await t.call("GET", "/register/available")).statusCode, 400);
+});
+
 test("login: correcto devuelve token; nombre o clave incorrectos dan el mismo error", async () => {
   const ok = await t.post("/login", { dname: "ana", password: "clave-segura" }); // mayúsculas no importan
   assert.equal(ok.statusCode, 200);

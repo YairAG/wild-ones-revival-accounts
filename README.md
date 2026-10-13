@@ -31,6 +31,7 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 | Ruta | Body | Respuesta |
 |---|---|---|
 | `POST /register` | `{ "dname": "Ana", "password": "..." }` | `201` data `{ id, dname, token }` · `400` · `409 NAME_TAKEN` |
+| `GET /register/available?dname=Ana` | | `200` data `{ available }` · `400` (formato no válido) |
 | `POST /login` | `{ "dname": "Ana", "password": "..." }` | `200` data `{ id, dname, token }` · `401 WRONG_CREDENTIALS` (nombre o contraseña) |
 | `POST /refresh` | (cookie) | `200` data `{ id, dname, token }` · `401 SESSION_EXPIRED` |
 | `POST /logout` | (cookie) | `200` (cierra la sesión de este navegador) |
@@ -189,7 +190,7 @@ src/
   modules/
     auth/              registrarse y entrar
       index.ts           registra las rutas del módulo
-      register.ts        POST /register, de principio a fin
+      register.ts        POST /register, de principio a fin, y GET /register/available
       login.ts           POST /login, de principio a fin
       refresh.ts         POST /refresh y POST /logout
       account.ts         cambiar contraseña, cerrar otras sesiones, eliminar cuenta
