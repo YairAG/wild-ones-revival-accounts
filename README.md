@@ -21,8 +21,24 @@ contrato de [docs/CUENTAS.md](https://github.com/YairAG/Wild-Ones-Revival/blob/d
 - `dname`: 3 a 16 letras, números o `_`. Único sin importar mayúsculas ("Ana" = "ana").
 - `password`: mínimo 8 caracteres.
 - Errores: `{ "error": "mensaje para mostrar" }`.
-- Límite: `REQUESTS_PER_MINUTE` intentos por minuto y por IP (`429` si se pasa).
+- Límite (solo en estas dos rutas): `REQUESTS_PER_MINUTE` intentos por minuto y por IP (`429` si se pasa).
 - El `token` se manda al servidor de juego: `{"command":"logIn","token":"<token>"}`.
+
+### Amigos
+
+Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si falta o expiró).
+
+| Ruta | Body | Respuesta |
+|---|---|---|
+| `GET /friends` | | `200 { friends, incoming, outgoing }` |
+| `POST /friends/requests` | `{ "dname": "Beto" }` | `201 { status: "pending" }` · `200 { status: "accepted" }` si Beto ya te había enviado una · `404` no existe · `400` a ti mismo · `409` ya son amigos o ya la enviaste |
+| `POST /friends/requests/:id/accept` | | `200 { status: "accepted" }` · `404` no te envió una |
+| `DELETE /friends/requests/:id` | | `204` (rechazar una recibida o cancelar una enviada) · `404` |
+| `DELETE /friends/:id` | | `204` (deja de ser amigo para los dos) · `404` no es tu amigo |
+
+- `friends`: `[{ id, dname, level, presence }]`, en línea primero. `presence` (`"playing"`, `"lobby"` u
+  `"offline"`) la escribe el servidor de juego en `users`.
+- `incoming` / `outgoing`: `[{ id, dname }]`, solicitudes recibidas y enviadas.
 
 ## Estructura
 
@@ -32,7 +48,7 @@ lógica, acceso a Mongo y tipos). Para entender el registro basta con abrir `reg
 ```
 src/
   server.ts            punto de entrada: lee el .env, conecta a Mongo, abre el puerto
-  app.ts               arma la app: CORS, límite de intentos, errores y módulos
+  app.ts               arma la app: CORS, límite de intentos (por ruta), errores y módulos
   config/env.ts        lee y valida el .env (si falta algo obligatorio, no arranca)
   db/                  conexión, índices e ids numéricos consecutivos
   shared/              errores (AppError), validación con zod, tipo ModuleDeps
@@ -43,13 +59,23 @@ src/
       login.ts           POST /login, de principio a fin
       accounts.ts        colección accounts (credenciales)
       password.ts        hash de contraseñas (scrypt)
-      token.ts           JWT para el servidor de juego
+      token.ts           JWT para el servidor de juego (firmar y verificar)
+      require-user.ts    para rutas con sesión: id del jugador desde el token, o 401
+      attempts-limit.ts  límite de intentos de /login y /register
       schemas.ts         validación del body
       types.ts           Account, Session
     players/           el jugador del juego
       new-player.ts      jugador inicial: los valores iniciales se ajustan aquí
       players.ts         colección users
-      types.ts           Player, Pet
+      types.ts           Player, Pet, Presence
+    friends/           amigos y solicitudes
+      index.ts           registra las rutas del módulo
+      list.ts            GET /friends
+      requests.ts        enviar, aceptar y rechazar solicitudes
+      remove.ts          DELETE /friends/:id
+      friendships.ts     colección friendships
+      schemas.ts         validación del body y del :id
+      types.ts           Friendship, Friend, FriendsList
 test/                  tests (helpers/setup.ts arranca la app con un Mongo temporal)
 ```
 
@@ -67,3 +93,5 @@ La misma base que el servidor de juego:
 - `users`: el jugador, con el formato que espera el servidor de juego. Este backend solo lo crea; después lo
   modifica el servidor de juego.
 - `counters`: contador para que los ids sean 1, 2, 3…
+- `friendships`: `{ pair, from, to, status, createdAt }`, una por pareja de jugadores (`pair` = "menor-mayor"
+  de los dos ids, con índice único). `status`: `"pending"` (solicitud de `from` a `to`) o `"accepted"`.

@@ -26,6 +26,14 @@ export async function startTestApp(overrides: Partial<Config> = {}) {
     app,
     db,
     post: (url: string, body: object) => app.inject({ method: "POST", url, payload: body }),
+    // Petición con sesión: el token va en Authorization como lo manda el frontend
+    call: (method: "GET" | "POST" | "DELETE", url: string, token?: string, body?: object) =>
+      app.inject({
+        method,
+        url,
+        payload: body,
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      }),
     async stop() {
       await app.close();
       await client.close();

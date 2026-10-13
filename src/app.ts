@@ -6,6 +6,7 @@ import type { Db } from "mongodb";
 import type { Config } from "./config/env";
 import { AppError } from "./shared/errors";
 import { authModule } from "./modules/auth";
+import { friendsModule } from "./modules/friends";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
@@ -21,6 +22,7 @@ export async function buildApp(db: Db, config: Config) {
 
   // Módulos
   authModule(app, { db, config });
+  friendsModule(app, { db, config });
 
   return app;
 }

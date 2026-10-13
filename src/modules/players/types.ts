@@ -44,4 +44,8 @@ export type Player = {
   userAccessories: string[];
   durability: Record<string, number>;
   allowedMaps: string[];
+  presence?: Presence; // la escribe el servidor de juego; si no existe, nunca se ha conectado
 };
+
+/** Dónde está el jugador ahora (lo actualiza el servidor de juego, ver docs/CUENTAS.md en Wild-Ones-Revival) */
+export type Presence = "playing" | "lobby" | "offline";

@@ -1,0 +1,44 @@
+// GET /friends: tus amigos (con nivel y dónde están) y las solicitudes pendientes, enviadas y recibidas.
+import type { FastifyInstance } from "fastify";
+import type { ModuleDeps } from "../../shared/module";
+import { requireUser } from "../auth/require-user";
+import { findPlayers } from "../players/players";
+import { listFor } from "./friendships";
+import type { Friend, FriendsList, PlayerRef } from "./types";
+
+// En línea primero (en partida, luego en lobby), después por nombre
+const presenceOrder = { playing: 0, lobby: 1, offline: 2 };
+
+export function listRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
+  app.get("/friends", async (req) => {
+    const me = requireUser(req, config);
+    const relations = await listFor(db, me);
+    const other = (r: { from: number; to: number }) => (r.from === me ? r.to : r.from);
+
+    const players = new Map((await findPlayers(db, relations.map(other))).map((p) => [p.id, p]));
+    const result: FriendsList = { friends: [], incoming: [], outgoing: [] };
+
+    for (const relation of relations) {
+      const player = players.get(other(relation));
+      if (!player) continue; // el jugador ya no existe
+      if (relation.status === "accepted") {
+        const friend: Friend = {
+          id: player.id,
+          dname: player.dname,
+          level: player.level,
+          presence: player.presence ?? "offline",
+        };
+        result.friends.push(friend);
+      } else {
+        const ref: PlayerRef = { id: player.id, dname: player.dname };
+        (relation.to === me ? result.incoming : result.outgoing).push(ref);
+      }
+    }
+
+    result.friends.sort(
+      (a, b) =>
+        presenceOrder[a.presence] - presenceOrder[b.presence] || a.dname.localeCompare(b.dname),
+    );
+    return result;
+  });
+}
