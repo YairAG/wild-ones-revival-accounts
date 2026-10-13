@@ -6,6 +6,7 @@
 import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
 import type { ModuleDeps } from "../../shared/module";
+import { failure, success, type ErrorId } from "../../shared/response";
 import { findAccountById, muteAccount } from "../auth/accounts";
 import { verifyToken } from "../auth/token";
 import { filterText } from "./filter";
@@ -45,18 +46,19 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
 
   app.get("/chat", { websocket: true }, (socket) => {
     let user: { id: number; dname: string; mod: boolean } | null = null;
-    const fail = (error: string) => send(socket, { type: "error", error });
+    const fail = (code: number, error: ErrorId, message: string) =>
+      send(socket, { type: "error", ...failure(code, error, message) });
 
     async function handle(raw: string) {
       const parsed = clientMessageSchema.safeParse(parseJson(raw));
-      if (!parsed.success) return fail(parsed.error.issues[0].message);
+      if (!parsed.success) return fail(400, "INVALID_DATA", parsed.error.issues[0].message);
       const message = parsed.data;
 
       if (message.type === "auth") {
         const id = verifyToken(config, message.token);
         const account = id === null ? null : await findAccountById(db, id);
         if (!account) {
-          fail("Tu sesión expiró, vuelve a entrar");
+          fail(401, "SESSION_EXPIRED", "Tu sesión expiró, vuelve a entrar");
           return socket.close();
         }
         user = { id: account.userId, dname: account.dname, mod: account.role === "mod" };
@@ -66,14 +68,14 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
         return;
       }
 
-      if (!user) return fail("Primero entra con tu sesión");
+      if (!user) return fail(401, "LOGIN_REQUIRED", "Primero entra con tu sesión");
 
       if (message.type === "delete" || message.type === "mute") {
-        if (!user.mod) return fail("Solo los moderadores pueden hacer eso");
+        if (!user.mod) return fail(403, "NOT_MOD", "Solo los moderadores pueden hacer eso");
         const mod = { id: user.id, dname: user.dname };
         if (message.type === "delete") {
           const deleted = await deleteMessage(db, message.id);
-          if (!deleted) return fail("Ese mensaje ya no existe");
+          if (!deleted) return fail(404, "MESSAGE_NOT_FOUND", "Ese mensaje ya no existe");
           broadcast({ type: "deleted", id: message.id });
           const target = { id: deleted.userId, dname: deleted.dname };
           const text = deleted.original ?? deleted.text;
@@ -81,13 +83,11 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
         }
         const { userId, minutes, reason } = message;
         const muted = await muteAccount(db, userId, new Date(Date.now() + minutes * 60_000));
-        if (!muted) return fail("No existe ese jugador");
+        if (!muted) return fail(404, "PLAYER_NOT_FOUND", "No existe ese jugador");
         const target = { id: muted.userId, dname: muted.dname };
         await logAction(db, { at: new Date(), mod, action: "mute", target, minutes, reason });
-        return send(socket, {
-          type: "notice",
-          text: `${muted.dname} silenciado ${duration(minutes)}`,
-        });
+        const notice = success(200, `${muted.dname} silenciado ${duration(minutes)}`);
+        return send(socket, { type: "notice", ...notice });
       }
 
       // Se lee la cuenta en cada mensaje para que un silencio aplique aunque ya estuviera conectado
@@ -95,10 +95,10 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
       const now = Date.now();
       if (mutedUntil && mutedUntil.getTime() > now) {
         const minutes = Math.ceil((mutedUntil.getTime() - now) / 60_000);
-        return fail(`Estás silenciado ${minutes} min más`);
+        return fail(403, "MUTED", `Estás silenciado ${minutes} min más`);
       }
       if (now - (lastSent.get(user.id) ?? 0) < MIN_INTERVAL_MS) {
-        return fail("Espera un momento antes de mandar otro mensaje");
+        return fail(429, "TOO_FAST", "Espera un momento antes de mandar otro mensaje");
       }
       lastSent.set(user.id, now);
 
@@ -117,7 +117,7 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
     socket.on("message", (raw) =>
       handle(String(raw)).catch((e) => {
         app.log.error(e);
-        fail("Error inesperado");
+        fail(500, "SERVER_ERROR", "Error inesperado, intenta de nuevo");
       }),
     );
     socket.on("close", () => online.delete(socket));

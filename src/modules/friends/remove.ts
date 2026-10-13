@@ -2,6 +2,7 @@
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../shared/errors";
 import type { ModuleDeps } from "../../shared/module";
+import { respond } from "../../shared/response";
 import { parseBody } from "../../shared/validation";
 import { requireUser } from "../auth/require-user";
 import { removeBetween } from "./friendships";
@@ -12,8 +13,8 @@ export function removeRoute(app: FastifyInstance, { db, config }: ModuleDeps): v
     const me = requireUser(req, config);
     const { id } = parseBody(playerIdSchema, req.params);
     if (!(await removeBetween(db, me, id, "accepted"))) {
-      throw new AppError(404, "Ese jugador no es tu amigo");
+      throw new AppError(404, "NOT_FRIENDS", "Ese jugador no es tu amigo");
     }
-    return reply.code(204).send();
+    return respond(reply, 200, "Amigo eliminado");
   });
 }

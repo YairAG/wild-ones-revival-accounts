@@ -4,6 +4,7 @@ import { nextId } from "../../db/counters";
 import { AppError } from "../../shared/errors";
 import { attemptsLimit } from "./attempts-limit";
 import type { ModuleDeps } from "../../shared/module";
+import { respond } from "../../shared/response";
 import { parseBody } from "../../shared/validation";
 import { newPlayer } from "../players/new-player";
 import { createPlayer } from "../players/players";
@@ -24,12 +25,12 @@ export function registerRoute(app: FastifyInstance, { db, config }: ModuleDeps):
       passwordHash: await hashPassword(password),
       createdAt: new Date(),
     });
-    if (!created) throw new AppError(409, "Ese nombre ya existe");
+    if (!created) throw new AppError(409, "NAME_TAKEN", "Ese nombre ya existe");
 
     await createPlayer(db, newPlayer(id, dname));
     req.log.info({ id, dname }, "Cuenta creada");
 
     const session: Session = { id, dname, token: signToken(config, id) };
-    return reply.code(201).send(session);
+    return respond(reply, 201, "Cuenta creada", session);
   });
 }

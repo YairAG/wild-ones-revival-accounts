@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { Failure, Success } from "../../shared/response";
 
 /** Mensaje guardado (colección "chat_messages") */
 export type StoredMessage = {
@@ -49,5 +50,6 @@ export type ChatServerEvent =
   | { type: "history"; messages: ChatMessage[]; mod: boolean }
   | { type: "message"; message: ChatMessage } // alguien escribió
   | { type: "deleted"; id: string } // un moderador borró un mensaje
-  | { type: "notice"; text: string } // aviso solo para ti ("Beto silenciado 60 min")
-  | { type: "error"; error: string }; // solo a quien lo causó
+  // Avisos y errores solo para ti, con el formato de todas las respuestas (shared/response.ts)
+  | ({ type: "notice" } & Success) // "Beto silenciado 1 h"
+  | ({ type: "error" } & Failure); // "Espera un momento antes de mandar otro mensaje"

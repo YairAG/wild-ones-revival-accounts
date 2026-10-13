@@ -1,11 +1,12 @@
 // Arma la aplicación: plugins, manejo de errores y módulos.
-import Fastify from "fastify";
+import Fastify, { type FastifyError, type FastifyReply } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
 import type { Db } from "mongodb";
 import type { Config } from "./config/env";
 import { AppError } from "./shared/errors";
+import { failure, type ErrorId } from "./shared/response";
 import { authModule } from "./modules/auth";
 import { chatModule } from "./modules/chat";
 import { friendsModule } from "./modules/friends";
@@ -17,11 +18,22 @@ export async function buildApp(db: Db, config: Config) {
   await app.register(rateLimit, { global: false });
   await app.register(websocket); // para el chat
 
-  // Errores esperados (AppError) → { error: "mensaje" } con su código. El resto lo maneja Fastify
-  app.setErrorHandler((err, _req, reply) => {
-    if (err instanceof AppError) return reply.code(err.status).send({ error: err.message });
-    return reply.send(err);
+  // Todos los errores salen con el mismo formato: { ok: false, code, message, error } (ver shared/response.ts)
+  const fail = (reply: FastifyReply, code: number, error: ErrorId, message: string) =>
+    reply.code(code).send(failure(code, error, message));
+  app.setErrorHandler((err: FastifyError, req, reply) => {
+    if (err instanceof AppError) return fail(reply, err.status, err.error, err.message);
+    if (err.statusCode === 429) {
+      return fail(reply, 429, "TOO_MANY_REQUESTS", "Demasiados intentos, espera un minuto");
+    }
+    // Otros errores del cliente que detecta Fastify (p. ej. JSON mal escrito)
+    if (err.statusCode && err.statusCode < 500) {
+      return fail(reply, err.statusCode, "INVALID_DATA", "La petición no es válida");
+    }
+    req.log.error(err);
+    return fail(reply, 500, "SERVER_ERROR", "Error inesperado, intenta de nuevo");
   });
+  app.setNotFoundHandler((_req, reply) => fail(reply, 404, "NOT_FOUND", "Esa ruta no existe"));
 
   // Módulos
   authModule(app, { db, config });

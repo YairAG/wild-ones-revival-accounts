@@ -13,7 +13,9 @@ before(async () => {
   t = await startTestApp();
   await t.app.ready();
   for (const dname of ["Ana", "Beto", "Moni", "Dani"]) {
-    token[dname] = (await t.post("/register", { dname, password: "clave-segura" })).json().token;
+    token[dname] = (
+      await t.post("/register", { dname, password: "clave-segura" })
+    ).json().data.token;
   }
   await t.db.collection("accounts").updateOne({ dname: "Moni" }, { $set: { role: "mod" } });
 });
@@ -27,6 +29,15 @@ type AnyEvent = {
   messages?: ChatMessage[];
   mod?: boolean;
 };
+
+// Evento de error con el formato de todas las respuestas
+const fail = (code: number, error: string, message: string) => ({
+  type: "error",
+  ok: false,
+  code,
+  message,
+  error,
+});
 
 // Conexión de prueba: guarda lo que llega y deja esperar el siguiente evento
 async function connect() {
@@ -61,17 +72,17 @@ test("sin token válido responde con error y cierra", async () => {
   const client = await connect();
   const closed = new Promise((resolve) => client.ws.on("close", resolve));
   client.send({ type: "auth", token: "no-es-un-jwt" });
-  assert.deepEqual(await client.next(), {
-    type: "error",
-    error: "Tu sesión expiró, vuelve a entrar",
-  });
+  assert.deepEqual(
+    await client.next(),
+    fail(401, "SESSION_EXPIRED", "Tu sesión expiró, vuelve a entrar"),
+  );
   await closed;
 });
 
 test("escribir antes de entrar no se permite", async () => {
   const client = await connect();
   client.send({ type: "send", text: "hola" });
-  assert.deepEqual(await client.next(), { type: "error", error: "Primero entra con tu sesión" });
+  assert.deepEqual(await client.next(), fail(401, "LOGIN_REQUIRED", "Primero entra con tu sesión"));
   client.ws.terminate();
 });
 
@@ -98,18 +109,18 @@ test("un mensaje llega a todos y queda en el historial", async () => {
 test("un mensaje cada 2 s, no vacío y de 200 caracteres como máximo", async () => {
   const beto = await enter("Beto");
   beto.send({ type: "send", text: "   " });
-  assert.deepEqual(await beto.next(), { type: "error", error: "Escribe un mensaje" });
+  assert.deepEqual(await beto.next(), fail(400, "INVALID_DATA", "Escribe un mensaje"));
   beto.send({ type: "send", text: "x".repeat(201) });
-  assert.deepEqual(await beto.next(), { type: "error", error: "Máximo 200 caracteres" });
+  assert.deepEqual(await beto.next(), fail(400, "INVALID_DATA", "Máximo 200 caracteres"));
 
   // El primero pasa; el segundo, enviado enseguida, no
   beto.send({ type: "send", text: "uno" });
   assert.equal((await beto.next()).type, "message");
   beto.send({ type: "send", text: "dos" });
-  assert.deepEqual(await beto.next(), {
-    type: "error",
-    error: "Espera un momento antes de mandar otro mensaje",
-  });
+  assert.deepEqual(
+    await beto.next(),
+    fail(429, "TOO_FAST", "Espera un momento antes de mandar otro mensaje"),
+  );
   beto.ws.terminate();
 });
 
@@ -131,26 +142,31 @@ test("moderación: solo un moderador borra mensajes (para todos) y silencia juga
 
   // Dani no es moderador
   dani.send({ type: "delete", id: message.id });
-  assert.deepEqual(await dani.next(), {
-    type: "error",
-    error: "Solo los moderadores pueden hacer eso",
-  });
+  assert.deepEqual(
+    await dani.next(),
+    fail(403, "NOT_MOD", "Solo los moderadores pueden hacer eso"),
+  );
 
   moni.send({ type: "delete", id: message.id });
   assert.deepEqual(await moni.next(), { type: "deleted", id: message.id });
   assert.deepEqual(await dani.next(), { type: "deleted", id: message.id });
   moni.send({ type: "delete", id: message.id });
-  assert.deepEqual(await moni.next(), { type: "error", error: "Ese mensaje ya no existe" });
+  assert.deepEqual(await moni.next(), fail(404, "MESSAGE_NOT_FOUND", "Ese mensaje ya no existe"));
 
   // Silenciar aplica aunque Dani ya esté conectado
   moni.send({ type: "mute", userId: message.userId, minutes: 60, reason: "spam repetido" });
-  assert.deepEqual(await moni.next(), { type: "notice", text: "Dani silenciado 1 h" });
+  assert.deepEqual(await moni.next(), {
+    type: "notice",
+    ok: true,
+    code: 200,
+    message: "Dani silenciado 1 h",
+  });
   await new Promise((resolve) => setTimeout(resolve, 2_000)); // el límite de 1 mensaje cada 2 s
   dani.send({ type: "send", text: "sigo aquí" });
-  assert.deepEqual(await dani.next(), { type: "error", error: "Estás silenciado 60 min más" });
+  assert.deepEqual(await dani.next(), fail(403, "MUTED", "Estás silenciado 60 min más"));
 
   moni.send({ type: "mute", userId: 9999, minutes: 5 });
-  assert.deepEqual(await moni.next(), { type: "error", error: "No existe ese jugador" });
+  assert.deepEqual(await moni.next(), fail(404, "PLAYER_NOT_FOUND", "No existe ese jugador"));
   for (const c of [moni, dani]) c.ws.terminate();
 });
 
@@ -188,9 +204,14 @@ test("panel de moderación: silenciados, registro y quitar silencio (solo modera
   assert.equal((await t.call("GET", "/chat/moderation")).statusCode, 401);
   const notMod = await t.call("GET", "/chat/moderation", token.Ana);
   assert.equal(notMod.statusCode, 403);
-  assert.deepEqual(notMod.json(), { error: "Solo los moderadores pueden hacer eso" });
+  assert.deepEqual(notMod.json(), {
+    ok: false,
+    code: 403,
+    message: "Solo los moderadores pueden hacer eso",
+    error: "NOT_MOD",
+  });
 
-  const summary = (await t.call("GET", "/chat/moderation", token.Moni)).json();
+  const summary = (await t.call("GET", "/chat/moderation", token.Moni)).json().data;
   assert.deepEqual(
     summary.muted.map((m: { dname: string }) => m.dname),
     ["Dani"],
@@ -206,11 +227,13 @@ test("panel de moderación: silenciados, registro y quitar silencio (solo modera
   assert.equal(del.minutes, undefined);
 
   assert.equal((await t.call("DELETE", `/chat/mutes/${dani}`, token.Ana)).statusCode, 403);
-  assert.equal((await t.call("DELETE", `/chat/mutes/${dani}`, token.Moni)).statusCode, 204);
+  const unmuted = await t.call("DELETE", `/chat/mutes/${dani}`, token.Moni);
+  assert.deepEqual(unmuted.json(), { ok: true, code: 200, message: "Dani ya puede escribir" });
   const again = await t.call("DELETE", `/chat/mutes/${dani}`, token.Moni);
   assert.equal(again.statusCode, 404);
+  assert.equal(again.json().error, "NOT_MUTED");
 
-  const after = (await t.call("GET", "/chat/moderation", token.Moni)).json();
+  const after = (await t.call("GET", "/chat/moderation", token.Moni)).json().data;
   assert.deepEqual(after.muted, []);
   assert.equal(after.log[0].action, "unmute");
 });

@@ -11,16 +11,30 @@ contrato de [docs/CUENTAS.md](https://github.com/YairAG/Wild-Ones-Revival/blob/d
     pnpm dev               # http://localhost:3000, reinicia al guardar
     pnpm test              # no necesita Mongo instalado
 
+## Formato de las respuestas
+
+Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
+
+```json
+{ "ok": true,  "code": 201, "message": "Cuenta creada", "data": { "id": 1, "dname": "Ana", "token": "..." } }
+{ "ok": false, "code": 409, "message": "Ese nombre ya existe", "error": "NAME_TAKEN" }
+```
+
+- `ok`: si salió bien. `code`: el código HTTP (también va en la respuesta). `message`: texto para el jugador.
+- `data`: lo que devuelve la ruta, solo si hay algo que devolver. En las tablas de abajo se indica como `data`.
+- `error`: identificador fijo para que el frontend decida qué hacer (no cambia si se reescribe el mensaje). La
+  lista completa está en `src/shared/response.ts`. Generales: `INVALID_DATA` (400), `SESSION_EXPIRED` (401),
+  `NOT_FOUND` (404, la ruta no existe), `TOO_MANY_REQUESTS` (429) y `SERVER_ERROR` (500).
+
 ## Rutas
 
 | Ruta | Body | Respuesta |
 |---|---|---|
-| `POST /register` | `{ "dname": "Ana", "password": "..." }` | `201 { id, dname, token }` · `400` datos inválidos · `409` nombre ocupado |
-| `POST /login` | `{ "dname": "Ana", "password": "..." }` | `200 { id, dname, token }` · `401` nombre o contraseña incorrectos |
+| `POST /register` | `{ "dname": "Ana", "password": "..." }` | `201` data `{ id, dname, token }` · `400` · `409 NAME_TAKEN` |
+| `POST /login` | `{ "dname": "Ana", "password": "..." }` | `200` data `{ id, dname, token }` · `401 WRONG_CREDENTIALS` (nombre o contraseña) |
 
 - `dname`: 3 a 16 letras, números o `_`. Único sin importar mayúsculas ("Ana" = "ana").
 - `password`: mínimo 8 caracteres.
-- Errores: `{ "error": "mensaje para mostrar" }`.
 - Límite (solo en estas dos rutas): `REQUESTS_PER_MINUTE` intentos por minuto y por IP (`429` si se pasa).
 - El `token` se manda al servidor de juego: `{"command":"logIn","token":"<token>"}`.
 
@@ -30,11 +44,11 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
 
 | Ruta | Body | Respuesta |
 |---|---|---|
-| `GET /friends` | | `200 { friends, incoming, outgoing }` |
-| `POST /friends/requests` | `{ "dname": "Beto" }` | `201 { status: "pending" }` · `200 { status: "accepted" }` si Beto ya te había enviado una · `404` no existe · `400` a ti mismo · `409` ya son amigos o ya la enviaste |
-| `POST /friends/requests/:id/accept` | | `200 { status: "accepted" }` · `404` no te envió una |
-| `DELETE /friends/requests/:id` | | `204` (rechazar una recibida o cancelar una enviada) · `404` |
-| `DELETE /friends/:id` | | `204` (deja de ser amigo para los dos) · `404` no es tu amigo |
+| `GET /friends` | | `200` data `{ friends, incoming, outgoing }` |
+| `POST /friends/requests` | `{ "dname": "Beto" }` | `201` data `{ status: "pending" }` · `200` data `{ status: "accepted" }` si Beto ya te había enviado una · `404 PLAYER_NOT_FOUND` · `400 SELF_REQUEST` · `409 ALREADY_FRIENDS` / `ALREADY_REQUESTED` |
+| `POST /friends/requests/:id/accept` | | `200` data `{ status: "accepted" }` · `404 REQUEST_NOT_FOUND` |
+| `DELETE /friends/requests/:id` | | `200` (rechazar una recibida o cancelar una enviada) · `404 REQUEST_NOT_FOUND` |
+| `DELETE /friends/:id` | | `200` (deja de ser amigo para los dos) · `404 NOT_FRIENDS` |
 
 - `friends`: `[{ id, dname, level, presence }]`, en línea primero. `presence` (`"playing"`, `"lobby"` u
   `"offline"`) la escribe el servidor de juego en `users`.
@@ -57,8 +71,8 @@ cliente es el token (no va en la URL para que no quede en los logs):
 | `{ "type": "history", "messages": [...], "mod": false }` | Al entrar: los últimos 50 mensajes y si puedes moderar |
 | `{ "type": "message", "message": { id, userId, dname, text, at } }` | Alguien escribió (le llega a todos) |
 | `{ "type": "deleted", "id": "..." }` | Un moderador borró un mensaje (a todos) |
-| `{ "type": "notice", "text": "..." }` | Aviso solo para ti (p. ej. al silenciar) |
-| `{ "type": "error", "error": "..." }` | Algo que mandaste no se pudo |
+| `{ "type": "notice", "ok": true, "code", "message" }` | Aviso solo para ti (p. ej. al silenciar) |
+| `{ "type": "error", "ok": false, "code", "message", "error" }` | Algo que mandaste no se pudo: `LOGIN_REQUIRED`, `TOO_FAST`, `MUTED`, `NOT_MOD`... |
 
 - Las groserías de la lista de `src/modules/chat/filter.ts` se reemplazan por `***`. Si el texto cambió, se
   guarda también el original, que solo reciben los moderadores (campo `original` del mensaje).
@@ -69,12 +83,12 @@ cliente es el token (no va en la URL para que no quede en los logs):
 
 #### Panel de moderación
 
-Solo moderadores, con el `token` en `Authorization` (`401` sin sesión, `403` si no eres moderador).
+Solo moderadores, con el `token` en `Authorization` (`401 SESSION_EXPIRED` sin sesión, `403 NOT_MOD` si no eres moderador).
 
 | Ruta | Respuesta |
 |---|---|
-| `GET /chat/moderation` | `200 { muted, log }` |
-| `DELETE /chat/mutes/:id` | `204` (le quita el silencio) · `404` no está silenciado |
+| `GET /chat/moderation` | `200` data `{ muted, log }` |
+| `DELETE /chat/mutes/:id` | `200` (le quita el silencio) · `404 NOT_MUTED` |
 
 - `muted`: `[{ id, dname, until }]`, los silenciados ahora (el que termina antes primero).
 - `log`: las últimas 50 acciones, la más nueva primero: `{ at, mod, action, target, text?, minutes?, reason? }`.
@@ -91,7 +105,7 @@ src/
   app.ts               arma la app: CORS, límite de intentos (por ruta), errores y módulos
   config/env.ts        lee y valida el .env (si falta algo obligatorio, no arranca)
   db/                  conexión, índices e ids numéricos consecutivos
-  shared/              errores (AppError), validación con zod, tipo ModuleDeps
+  shared/              formato de respuestas, errores (AppError), validación con zod, tipo ModuleDeps
   modules/
     auth/              registrarse y entrar
       index.ts           registra las rutas del módulo

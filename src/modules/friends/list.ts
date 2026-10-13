@@ -1,6 +1,7 @@
 // GET /friends: tus amigos (con nivel y dónde están) y las solicitudes pendientes, enviadas y recibidas.
 import type { FastifyInstance } from "fastify";
 import type { ModuleDeps } from "../../shared/module";
+import { respond } from "../../shared/response";
 import { requireUser } from "../auth/require-user";
 import { findPlayers } from "../players/players";
 import { listFor } from "./friendships";
@@ -10,7 +11,7 @@ import type { Friend, FriendsList, PlayerRef } from "./types";
 const presenceOrder = { playing: 0, lobby: 1, offline: 2 };
 
 export function listRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
-  app.get("/friends", async (req) => {
+  app.get("/friends", async (req, reply) => {
     const me = requireUser(req, config);
     const relations = await listFor(db, me);
     const other = (r: { from: number; to: number }) => (r.from === me ? r.to : r.from);
@@ -39,6 +40,6 @@ export function listRoute(app: FastifyInstance, { db, config }: ModuleDeps): voi
       (a, b) =>
         presenceOrder[a.presence] - presenceOrder[b.presence] || a.dname.localeCompare(b.dname),
     );
-    return result;
+    return respond(reply, 200, "Lista de amigos", result);
   });
 }
