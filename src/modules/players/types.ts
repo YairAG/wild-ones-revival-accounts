@@ -47,6 +47,17 @@ export type Player = {
   presence?: Presence; // la escribe el servidor de juego; si no existe, nunca se ha conectado
 };
 
+/** Lo necesario para dibujar una mascota tal como se ve en el juego (el frontend se lo pide al SWF) */
+export type PetLook = {
+  name: string;
+  type: string; // especie: dog, monkey...
+  gender: string;
+  color1: string | number; // en la base hay de los dos: "0x6C6C6C" o 7105644
+  color2: string | number;
+  accessories: string[]; // la ropa que lleva puesta
+  current: boolean; // si es la que usa ahora
+};
+
 /** Qué relación tienes con un jugador, vista desde ti */
 export type Relation = "self" | "friends" | "outgoing" | "incoming" | "none"; // outgoing: le enviaste solicitud
 
@@ -59,7 +70,7 @@ export type PlayerProfile = {
   losses: number;
   gamecount: number; // partidas jugadas
   presence: Presence;
-  pets: { name: string; type: string }[];
+  pets: PetLook[]; // la que usa ahora tiene current: true
   mutualFriends: number; // amigos en común
   relation: Relation;
   blocked: boolean; // si tú lo bloqueaste

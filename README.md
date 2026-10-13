@@ -104,7 +104,8 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
 |---|---|
 | `GET /players/:id` | `200` data `{ id, dname, level, wins, losses, gamecount, presence, pets, mutualFriends, relation, blocked }` · `404 PLAYER_NOT_FOUND` |
 
-- `pets`: `[{ name, type }]`. `mutualFriends`: cuántos amigos tienen en común.
+- `pets`: `[{ name, type, gender, color1, color2, accessories, current }]`: lo necesario para dibujarla con su ropa
+  (el frontend se lo pide al SWF); `current` es la que usa ahora. `mutualFriends`: cuántos amigos tienen en común.
 - `relation`, vista desde quien pide: `"self"`, `"friends"`, `"outgoing"` (le enviaste solicitud), `"incoming"` o `"none"`.
 - `blocked`: si tú lo bloqueaste (nunca dice si él te bloqueó a ti).
 

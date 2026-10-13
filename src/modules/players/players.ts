@@ -23,11 +23,20 @@ export function findPlayer(db: Db, id: number) {
         gamecount: 1,
         presence: 1,
         ownedPets: 1,
+        currentPet: 1,
       },
     },
   ) as Promise<Pick<
     Player,
-    "id" | "dname" | "level" | "wins" | "losses" | "gamecount" | "presence" | "ownedPets"
+    | "id"
+    | "dname"
+    | "level"
+    | "wins"
+    | "losses"
+    | "gamecount"
+    | "presence"
+    | "ownedPets"
+    | "currentPet"
   > | null>;
 }
 

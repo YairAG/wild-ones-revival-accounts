@@ -41,7 +41,18 @@ test("perfil con estadísticas, mascotas y amigos en común", async () => {
     losses: 0,
     gamecount: 12,
     presence: "offline",
-    pets: [{ name: "Beto", type: res.data.pets[0].type }], // la mascota inicial lleva su nombre
+    // La mascota inicial lleva su nombre; con lo necesario para dibujarla
+    pets: [
+      {
+        name: "Beto",
+        type: "dog",
+        gender: "M",
+        color1: "0x6C6C6C",
+        color2: "0xE1E2E3",
+        accessories: [],
+        current: true,
+      },
+    ],
     mutualFriends: 1, // Caro
     relation: "friends",
     blocked: false,
