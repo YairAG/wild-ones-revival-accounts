@@ -20,6 +20,15 @@ export function findAccountById(db: Db, userId: number): Promise<Account | null>
   return accounts(db).findOne({ userId });
 }
 
+/** Silencia en el chat hasta `until`. Devuelve false si la cuenta no existe */
+export async function muteAccount(db: Db, userId: number, until: Date): Promise<boolean> {
+  const { matchedCount } = await accounts(db).updateOne(
+    { userId },
+    { $set: { mutedUntil: until } },
+  );
+  return matchedCount === 1;
+}
+
 /** Busca por nombre sin importar mayúsculas */
 export function findAccountByName(db: Db, dname: string): Promise<Account | null> {
   return accounts(db).findOne({ dname }, { collation: ignoreCase });

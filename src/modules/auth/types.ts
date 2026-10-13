@@ -4,6 +4,8 @@ export type Account = {
   dname: string;
   passwordHash: string; // "salt:hash" de scrypt
   createdAt: Date;
+  role?: "mod"; // moderador del chat. Se da a mano en Mongo (ver README)
+  mutedUntil?: Date; // silenciado en el chat hasta esta fecha
 };
 
 /** Lo que devuelven /register y /login */

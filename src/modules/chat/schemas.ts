@@ -14,4 +14,15 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       .min(1, "Escribe un mensaje")
       .max(MAX_LENGTH, `Máximo ${MAX_LENGTH} caracteres`),
   }),
+  // Solo moderadores
+  z.object({ type: z.literal("delete"), id: z.string() }),
+  z.object({
+    type: z.literal("mute"),
+    userId: z.number().int().positive(),
+    minutes: z
+      .number()
+      .int()
+      .min(1)
+      .max(7 * 24 * 60, "Máximo una semana"),
+  }),
 ]);

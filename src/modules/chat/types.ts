@@ -20,6 +20,9 @@ export type ChatMessage = {
 
 /** Lo que el servidor manda por el WebSocket */
 export type ChatServerEvent =
-  | { type: "history"; messages: ChatMessage[] } // al entrar: los últimos mensajes, del más viejo al más nuevo
+  // Al entrar: los últimos mensajes, del más viejo al más nuevo, y si puedes moderar
+  | { type: "history"; messages: ChatMessage[]; mod: boolean }
   | { type: "message"; message: ChatMessage } // alguien escribió
+  | { type: "deleted"; id: string } // un moderador borró un mensaje
+  | { type: "notice"; text: string } // aviso solo para ti ("Beto silenciado 60 min")
   | { type: "error"; error: string }; // solo a quien lo causó

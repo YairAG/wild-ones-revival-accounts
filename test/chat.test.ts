@@ -12,14 +12,21 @@ const token: Record<string, string> = {};
 before(async () => {
   t = await startTestApp();
   await t.app.ready();
-  for (const dname of ["Ana", "Beto"]) {
+  for (const dname of ["Ana", "Beto", "Moni", "Dani"]) {
     token[dname] = (await t.post("/register", { dname, password: "clave-segura" })).json().token;
   }
+  await t.db.collection("accounts").updateOne({ dname: "Moni" }, { $set: { role: "mod" } });
 });
 after(() => t?.stop());
 
 // Cualquier evento del servidor, con todos sus campos opcionales para leerlos fácil en los tests
-type AnyEvent = { type: string; error?: string; message?: ChatMessage; messages?: ChatMessage[] };
+type AnyEvent = {
+  type: string;
+  error?: string;
+  message?: ChatMessage;
+  messages?: ChatMessage[];
+  mod?: boolean;
+};
 
 // Conexión de prueba: guarda lo que llega y deja esperar el siguiente evento
 async function connect() {
@@ -110,4 +117,47 @@ test("el filtro tapa groserías completas, también en plural y con mayúsculas"
   assert.equal(filterText("PUTOS todos"), "*** todos");
   assert.equal(filterText("ya está pendiente"), "ya está pendiente"); // no es palabra completa
   assert.equal(filterText("computo"), "computo");
+});
+
+test("moderación: solo un moderador borra mensajes (para todos) y silencia jugadores", async () => {
+  const moni = await enter("Moni");
+  const dani = await enter("Dani");
+
+  dani.send({ type: "send", text: "spam" });
+  const { message } = await moni.next();
+  await dani.next();
+  assert.ok(message);
+
+  // Dani no es moderador
+  dani.send({ type: "delete", id: message.id });
+  assert.deepEqual(await dani.next(), {
+    type: "error",
+    error: "Solo los moderadores pueden hacer eso",
+  });
+
+  moni.send({ type: "delete", id: message.id });
+  assert.deepEqual(await moni.next(), { type: "deleted", id: message.id });
+  assert.deepEqual(await dani.next(), { type: "deleted", id: message.id });
+  moni.send({ type: "delete", id: message.id });
+  assert.deepEqual(await moni.next(), { type: "error", error: "Ese mensaje ya no existe" });
+
+  // Silenciar aplica aunque Dani ya esté conectado
+  moni.send({ type: "mute", userId: message.userId, minutes: 60 });
+  assert.deepEqual(await moni.next(), { type: "notice", text: "Silenciado 60 min" });
+  await new Promise((resolve) => setTimeout(resolve, 2_000)); // el límite de 1 mensaje cada 2 s
+  dani.send({ type: "send", text: "sigo aquí" });
+  assert.deepEqual(await dani.next(), { type: "error", error: "Estás silenciado 60 min más" });
+
+  moni.send({ type: "mute", userId: 9999, minutes: 5 });
+  assert.deepEqual(await moni.next(), { type: "error", error: "No existe ese jugador" });
+  for (const c of [moni, dani]) c.ws.terminate();
+});
+
+test("el historial dice si puedes moderar", async () => {
+  const [moni, ana] = [await connect(), await connect()];
+  moni.send({ type: "auth", token: token.Moni });
+  ana.send({ type: "auth", token: token.Ana });
+  assert.equal((await moni.next()).mod, true);
+  assert.equal((await ana.next()).mod, false);
+  for (const c of [moni, ana]) c.ws.terminate();
 });
