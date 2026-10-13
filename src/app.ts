@@ -13,6 +13,7 @@ import { blocksModule } from "./modules/blocks";
 import { chatModule } from "./modules/chat";
 import { friendsModule } from "./modules/friends";
 import { playersModule } from "./modules/players";
+import { reportsModule } from "./modules/reports";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
@@ -48,6 +49,7 @@ export async function buildApp(db: Db, config: Config) {
   authModule(app, { db, config });
   friendsModule(app, { db, config });
   playersModule(app, { db, config });
+  reportsModule(app, { db, config });
   blocksModule(app, { db, config });
   chatModule(app, { db, config });
 

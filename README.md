@@ -77,6 +77,19 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
 - `relation`, vista desde quien pide: `"self"`, `"friends"`, `"outgoing"` (le enviaste solicitud), `"incoming"` o `"none"`.
 - `blocked`: si tú lo bloqueaste (nunca dice si él te bloqueó a ti).
 
+### Reportes
+
+| Ruta | Body | Respuesta |
+|---|---|---|
+| `POST /reports` | `{ targetId, reason, details?, messageId? }` | `201` · `400 SELF_REPORT` · `404 PLAYER_NOT_FOUND` / `MESSAGE_NOT_FOUND` · `409 ALREADY_REPORTED` |
+| `POST /reports/:id/resolve` | | Solo moderadores. `200` · `404 REPORT_NOT_FOUND` |
+
+- `reason`: `"harassment"`, `"cheating"`, `"inappropriate_name"`, `"spam"` u `"other"`. `details`: hasta 300 caracteres.
+- `messageId`: un mensaje del chat del reportado. El texto se toma de la base (el original, si el filtro lo tapó), así
+  que no se puede inventar.
+- Un reporte abierto por jugador y reportado. El reportado nunca sabe quién lo reportó.
+- Los abiertos salen en `GET /chat/moderation` (`reports`); al resolverlo queda en el registro (`resolve_report`).
+
 ### Bloqueos
 
 | Ruta | Respuesta |
@@ -120,7 +133,7 @@ Solo moderadores, con el `token` en `Authorization` (`401 SESSION_EXPIRED` sin s
 
 | Ruta | Respuesta |
 |---|---|
-| `GET /chat/moderation` | `200` data `{ muted, log }` |
+| `GET /chat/moderation` | `200` data `{ muted, log, reports }` |
 | `DELETE /chat/mutes/:id` | `200` (le quita el silencio) · `404 NOT_MUTED` |
 
 - `muted`: `[{ id, dname, until }]`, los silenciados ahora (el que termina antes primero).
@@ -154,6 +167,7 @@ src/
       attempts-limit.ts  límite de intentos de /login y /register
       schemas.ts         validación del body
       types.ts           Account, Session
+    reports/           reportes (index.ts: rutas; reports.ts: colección reports)
     players/           el jugador del juego
       index.ts           GET /players/:id (perfil)
       new-player.ts      jugador inicial: los valores iniciales se ajustan aquí

@@ -24,6 +24,12 @@ export async function saveMessage(db: Db, message: StoredMessage): Promise<Store
   return { ...message, _id: insertedId };
 }
 
+/** Un mensaje por su id (null si no existe o el id no es válido) */
+export function findMessage(db: Db, id: string): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(id)) return Promise.resolve(null);
+  return messages(db).findOne({ _id: new ObjectId(id) });
+}
+
 /** Borra un mensaje por su id. Devuelve el mensaje borrado, o null si no existe */
 export function deleteMessage(db: Db, id: string): Promise<StoredMessage | null> {
   if (!ObjectId.isValid(id)) return Promise.resolve(null);

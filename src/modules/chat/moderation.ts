@@ -1,5 +1,5 @@
 // Rutas del panel de moderación (solo moderadores, con el token en Authorization como las de amigos):
-//   GET /chat/moderation      quién está silenciado y las últimas acciones
+//   GET /chat/moderation      quién está silenciado, las últimas acciones y los reportes abiertos
 //   DELETE /chat/mutes/:id    quitarle el silencio a un jugador
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Db } from "mongodb";
@@ -11,13 +11,14 @@ import { parseBody } from "../../shared/validation";
 import { findAccountById, listMuted, unmuteAccount } from "../auth/accounts";
 import { requireUser } from "../auth/require-user";
 import { playerIdSchema } from "../friends/schemas";
+import { openReports } from "../reports/reports";
 import { lastActions, logAction } from "./moderation-log";
 import type { ModerationSummary, PlayerRef } from "./types";
 
 const LOG_SIZE = 50;
 
 /** El moderador que hace la petición, o 401 / 403 */
-async function requireMod(req: FastifyRequest, db: Db, config: Config): Promise<PlayerRef> {
+export async function requireMod(req: FastifyRequest, db: Db, config: Config): Promise<PlayerRef> {
   const account = await findAccountById(db, requireUser(req, config));
   if (account?.role !== "mod") {
     throw new AppError(403, "NOT_MOD", "Solo los moderadores pueden hacer eso");
@@ -35,6 +36,7 @@ export function moderationRoutes(app: FastifyInstance, { db, config }: ModuleDep
         until: a.mutedUntil!.toISOString(),
       })),
       log: await lastActions(db, LOG_SIZE),
+      reports: await openReports(db, LOG_SIZE),
     };
     return respond(reply, 200, "Resumen de moderación", summary);
   });

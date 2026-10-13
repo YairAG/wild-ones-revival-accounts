@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { Failure, Success } from "../../shared/response";
+import type { OpenReport } from "../reports/types";
 
 /** Mensaje guardado (colección "chat_messages") */
 export type StoredMessage = {
@@ -28,9 +29,9 @@ export type PlayerRef = { id: number; dname: string };
 export type LoggedAction = {
   at: Date;
   mod: PlayerRef; // quién la hizo
-  action: "delete" | "mute" | "unmute";
+  action: "delete" | "mute" | "unmute" | "resolve_report";
   target: PlayerRef; // a quién (el autor del mensaje borrado, el silenciado...)
-  text?: string; // el mensaje borrado (el original si el filtro lo había cambiado)
+  text?: string; // el mensaje borrado (el original si el filtro lo había cambiado) o el motivo del reporte
   minutes?: number; // duración del silencio
   reason?: string; // motivo del silencio
 };
@@ -42,6 +43,7 @@ export type ModerationLogEntry = Omit<LoggedAction, "at"> & { at: string };
 export type ModerationSummary = {
   muted: (PlayerRef & { until: string })[]; // silenciados ahora
   log: ModerationLogEntry[]; // las últimas acciones, la más nueva primero
+  reports: OpenReport[]; // reportes sin resolver, el más nuevo primero
 };
 
 /** Lo que el servidor manda por el WebSocket */
