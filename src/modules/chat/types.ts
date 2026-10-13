@@ -6,6 +6,7 @@ export type StoredMessage = {
   userId: number;
   dname: string;
   text: string; // ya filtrado
+  original?: string; // lo que escribió, solo si el filtro lo cambió
   createdAt: Date;
 };
 
@@ -15,6 +16,7 @@ export type ChatMessage = {
   userId: number;
   dname: string;
   text: string;
+  original?: string; // solo para moderadores, si el filtro cambió el texto
   at: string; // fecha ISO
 };
 

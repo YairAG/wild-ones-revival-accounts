@@ -4,14 +4,24 @@ import type { ChatMessage, StoredMessage } from "./types";
 
 const messages = (db: Db) => db.collection<StoredMessage>("chat_messages");
 
-export function toChatMessage({ _id, userId, dname, text, createdAt }: StoredMessage): ChatMessage {
-  return { id: String(_id), userId, dname, text, at: createdAt.toISOString() };
+/** El mensaje como lo ve el frontend. El texto original (sin filtrar) solo va a los moderadores */
+export function toChatMessage(stored: StoredMessage, forMod: boolean): ChatMessage {
+  const { _id, userId, dname, text, original, createdAt } = stored;
+  const message: ChatMessage = {
+    id: String(_id),
+    userId,
+    dname,
+    text,
+    at: createdAt.toISOString(),
+  };
+  if (forMod && original) message.original = original;
+  return message;
 }
 
-/** Guarda el mensaje y lo devuelve como lo ve el frontend */
-export async function saveMessage(db: Db, message: StoredMessage): Promise<ChatMessage> {
+/** Guarda el mensaje y lo devuelve con su _id */
+export async function saveMessage(db: Db, message: StoredMessage): Promise<StoredMessage> {
   const { insertedId } = await messages(db).insertOne(message);
-  return toChatMessage({ ...message, _id: insertedId });
+  return { ...message, _id: insertedId };
 }
 
 /** Borra un mensaje por su id. Devuelve false si no existe */
@@ -22,7 +32,7 @@ export async function deleteMessage(db: Db, id: string): Promise<boolean> {
 }
 
 /** Los últimos `limit` mensajes, del más viejo al más nuevo */
-export async function lastMessages(db: Db, limit: number): Promise<ChatMessage[]> {
+export async function lastMessages(db: Db, limit: number, forMod: boolean): Promise<ChatMessage[]> {
   const newest = await messages(db).find().sort({ _id: -1 }).limit(limit).toArray();
-  return newest.reverse().map(toChatMessage);
+  return newest.reverse().map((m) => toChatMessage(m, forMod));
 }

@@ -8,7 +8,7 @@ import type { ModuleDeps } from "../../shared/module";
 import { findAccountById, muteAccount } from "../auth/accounts";
 import { verifyToken } from "../auth/token";
 import { filterText } from "./filter";
-import { deleteMessage, lastMessages, saveMessage } from "./messages";
+import { deleteMessage, lastMessages, saveMessage, toChatMessage } from "./messages";
 import { clientMessageSchema } from "./schemas";
 import type { ChatServerEvent } from "./types";
 
@@ -24,11 +24,12 @@ const parseJson = (text: string): unknown => {
 };
 
 export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): void {
-  const online = new Set<WebSocket>(); // conexiones que ya entraron
+  const online = new Map<WebSocket, boolean>(); // conexiones que ya entraron → si es moderador
   const lastSent = new Map<number, number>(); // id del jugador → cuándo escribió por última vez
 
   const send = (socket: WebSocket, event: ChatServerEvent) => socket.send(JSON.stringify(event));
-  const broadcast = (event: ChatServerEvent) => online.forEach((socket) => send(socket, event));
+  const broadcast = (event: ChatServerEvent) =>
+    online.forEach((_mod, socket) => send(socket, event));
 
   app.get("/chat", { websocket: true }, (socket) => {
     let user: { id: number; dname: string; mod: boolean } | null = null;
@@ -47,9 +48,9 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
           return socket.close();
         }
         user = { id: account.userId, dname: account.dname, mod: account.role === "mod" };
-        const messages = await lastMessages(db, HISTORY_SIZE);
+        const messages = await lastMessages(db, HISTORY_SIZE, user.mod);
         send(socket, { type: "history", messages, mod: user.mod });
-        online.add(socket);
+        online.set(socket, user.mod);
         return;
       }
 
@@ -78,13 +79,16 @@ export function chatModule(app: FastifyInstance, { db, config }: ModuleDeps): vo
       }
       lastSent.set(user.id, now);
 
+      const text = filterText(message.text);
       const saved = await saveMessage(db, {
         userId: user.id,
         dname: user.dname,
-        text: filterText(message.text),
+        text,
+        ...(text !== message.text && { original: message.text }),
         createdAt: new Date(now),
       });
-      broadcast({ type: "message", message: saved });
+      // A cada quien con lo suyo: los moderadores también reciben el original
+      online.forEach((mod, s) => send(s, { type: "message", message: toChatMessage(saved, mod) }));
     }
 
     socket.on("message", (raw) =>

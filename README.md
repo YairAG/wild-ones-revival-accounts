@@ -60,7 +60,8 @@ cliente es el token (no va en la URL para que no quede en los logs):
 | `{ "type": "notice", "text": "..." }` | Aviso solo para ti (p. ej. al silenciar) |
 | `{ "type": "error", "error": "..." }` | Algo que mandaste no se pudo |
 
-- Las groserías de la lista de `src/modules/chat/filter.ts` se reemplazan por `***` antes de guardar.
+- Las groserías de la lista de `src/modules/chat/filter.ts` se reemplazan por `***`. Si el texto cambió, se
+  guarda también el original, que solo reciben los moderadores (campo `original` del mensaje).
 - Los mensajes se guardan en la colección `chat_messages`.
 - Hacer moderador a alguien (en `mongosh`): `db.accounts.updateOne({ dname: "Ana" }, { $set: { role: "mod" } })`.
   Toma efecto la próxima vez que entre al chat.

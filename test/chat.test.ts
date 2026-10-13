@@ -87,6 +87,7 @@ test("un mensaje llega a todos y queda en el historial", async () => {
   assert.deepEqual(forBeto, forAna);
   assert.equal(forAna.message?.dname, "Ana");
   assert.equal(forAna.message?.text, "hola a todos"); // sin espacios de más
+  assert.equal(forAna.message?.original, undefined); // sin groserías no hay original
   assert.ok(!Number.isNaN(Date.parse(forAna.message?.at)));
 
   const later = await enter("Beto"); // una conexión nueva ya ve el mensaje
@@ -160,4 +161,23 @@ test("el historial dice si puedes moderar", async () => {
   assert.equal((await moni.next()).mod, true);
   assert.equal((await ana.next()).mod, false);
   for (const c of [moni, ana]) c.ws.terminate();
+});
+
+test("si el filtro cambia el texto, solo los moderadores reciben el original", async () => {
+  const moni = await enter("Moni");
+  const ana = await enter("Ana");
+  ana.send({ type: "send", text: "eres un pendejo" });
+
+  const forMod = (await moni.next()).message;
+  const forAna = (await ana.next()).message;
+  assert.equal(forMod?.text, "eres un ***");
+  assert.equal(forMod?.original, "eres un pendejo");
+  assert.equal(forAna?.text, "eres un ***");
+  assert.equal(forAna?.original, undefined);
+
+  // También en el historial
+  const [later, mod] = [await enter("Beto"), await enter("Moni")];
+  assert.equal(later.history?.at(-1)?.original, undefined);
+  assert.equal(mod.history?.at(-1)?.original, "eres un pendejo");
+  for (const c of [moni, ana, later, mod]) c.ws.terminate();
 });
