@@ -1,8 +1,10 @@
-// GET /friends: tus amigos (con nivel y dónde están) y las solicitudes pendientes, enviadas y recibidas.
+// GET /friends: tus amigos (con nivel y dónde están), las solicitudes pendientes (enviadas y recibidas) y a quién
+// bloqueaste.
 import type { FastifyInstance } from "fastify";
 import type { ModuleDeps } from "../../shared/module";
 import { respond } from "../../shared/response";
 import { requireUser } from "../auth/require-user";
+import { blockedBy } from "../blocks/blocks";
 import { findPlayers } from "../players/players";
 import { listFor } from "./friendships";
 import type { Friend, FriendsList, PlayerRef } from "./types";
@@ -16,8 +18,14 @@ export function listRoute(app: FastifyInstance, { db, config }: ModuleDeps): voi
     const relations = await listFor(db, me);
     const other = (r: { from: number; to: number }) => (r.from === me ? r.to : r.from);
 
-    const players = new Map((await findPlayers(db, relations.map(other))).map((p) => [p.id, p]));
-    const result: FriendsList = { friends: [], incoming: [], outgoing: [] };
+    const blockedIds = await blockedBy(db, me);
+    const ids = [...relations.map(other), ...blockedIds];
+    const players = new Map((await findPlayers(db, ids)).map((p) => [p.id, p]));
+    const result: FriendsList = { friends: [], incoming: [], outgoing: [], blocked: [] };
+    for (const id of blockedIds) {
+      const player = players.get(id);
+      if (player) result.blocked.push({ id, dname: player.dname });
+    }
 
     for (const relation of relations) {
       const player = players.get(other(relation));

@@ -9,20 +9,26 @@ import type { FastifyReply } from "fastify";
 export type ErrorId =
   | "INVALID_DATA" // 400: el body, los parámetros o el mensaje no son válidos
   | "SELF_REQUEST" // 400: solicitud de amistad a ti mismo
+  | "SELF_BLOCK" // 400
+  | "SELF_REPORT" // 400
   | "WRONG_CREDENTIALS" // 401: nombre o contraseña incorrectos
   | "SESSION_EXPIRED" // 401: sin token o token vencido
   | "LOGIN_REQUIRED" // 401: en el chat, escribir antes de mandar el token
   | "NOT_MOD" // 403: solo moderadores
   | "MUTED" // 403: silenciado en el chat
+  | "BLOCKED" // 403: uno de los dos bloqueó al otro
   | "NOT_FOUND" // 404: la ruta no existe
   | "PLAYER_NOT_FOUND" // 404
   | "REQUEST_NOT_FOUND" // 404: solicitud de amistad
   | "NOT_FRIENDS" // 404
   | "NOT_MUTED" // 404
+  | "NOT_BLOCKED" // 404
+  | "REPORT_NOT_FOUND" // 404
   | "MESSAGE_NOT_FOUND" // 404: mensaje del chat
   | "NAME_TAKEN" // 409
   | "ALREADY_FRIENDS" // 409
   | "ALREADY_REQUESTED" // 409: ya hay una solicitud entre los dos
+  | "ALREADY_REPORTED" // 409: ya tienes un reporte abierto de ese jugador
   | "TOO_MANY_REQUESTS" // 429: límite de intentos de login/registro
   | "TOO_FAST" // 429: en el chat, un mensaje cada 2 s
   | "SERVER_ERROR"; // 500

@@ -9,6 +9,7 @@ import type { Config } from "./config/env";
 import { AppError } from "./shared/errors";
 import { failure, type ErrorId } from "./shared/response";
 import { authModule } from "./modules/auth";
+import { blocksModule } from "./modules/blocks";
 import { chatModule } from "./modules/chat";
 import { friendsModule } from "./modules/friends";
 
@@ -45,6 +46,7 @@ export async function buildApp(db: Db, config: Config) {
   // Módulos
   authModule(app, { db, config });
   friendsModule(app, { db, config });
+  blocksModule(app, { db, config });
   chatModule(app, { db, config });
 
   return app;

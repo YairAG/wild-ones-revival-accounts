@@ -9,6 +9,7 @@ import { respond } from "../../shared/response";
 import { parseBody } from "../../shared/validation";
 import { findAccountByName } from "../auth/accounts";
 import { requireUser } from "../auth/require-user";
+import { blockedEitherWay } from "../blocks/blocks";
 import { acceptRequest, createRequest, findBetween, removeBetween } from "./friendships";
 import { friendRequestSchema, playerIdSchema } from "./schemas";
 
@@ -21,6 +22,11 @@ export function requestsRoutes(app: FastifyInstance, { db, config }: ModuleDeps)
     if (!target) throw new AppError(404, "PLAYER_NOT_FOUND", "No existe un jugador con ese nombre");
     if (target.userId === me)
       throw new AppError(400, "SELF_REQUEST", "No puedes agregarte a ti mismo");
+
+    // No dice quién bloqueó a quién
+    if (await blockedEitherWay(db, me, target.userId)) {
+      throw new AppError(403, "BLOCKED", "No puedes enviarle una solicitud a ese jugador");
+    }
 
     const existing = await findBetween(db, me, target.userId);
     if (existing?.status === "accepted")

@@ -22,6 +22,8 @@ async function createIndexes(db: Db): Promise<void> {
   await db.collection("sessions").createIndex({ tokenHash: 1 }, { unique: true });
   await db.collection("sessions").createIndex({ previousHash: 1 });
   await db.collection("sessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  // Bloqueos: uno por pareja y sentido
+  await db.collection("blocks").createIndex({ from: 1, to: 1 }, { unique: true });
   // Amigos: una relación por pareja, y búsqueda por quien envía o recibe
   await db.collection("friendships").createIndex({ pair: 1 }, { unique: true });
   await db.collection("friendships").createIndex({ from: 1 });

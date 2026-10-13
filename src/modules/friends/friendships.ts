@@ -45,6 +45,11 @@ export async function acceptRequest(db: Db, from: number, to: number): Promise<b
   return result.modifiedCount === 1;
 }
 
+/** Borra cualquier relación entre dos jugadores (amistad o solicitud), p. ej. al bloquear */
+export async function removeAnyBetween(db: Db, a: number, b: number): Promise<void> {
+  await friendships(db).deleteOne({ pair: pairOf(a, b) });
+}
+
 /** Borra la relación entre dos jugadores si tiene ese estado. Devuelve false si no había */
 export async function removeBetween(
   db: Db,

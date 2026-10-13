@@ -57,15 +57,25 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
 
 | Ruta | Body | Respuesta |
 |---|---|---|
-| `GET /friends` | | `200` data `{ friends, incoming, outgoing }` |
-| `POST /friends/requests` | `{ "dname": "Beto" }` | `201` data `{ status: "pending" }` · `200` data `{ status: "accepted" }` si Beto ya te había enviado una · `404 PLAYER_NOT_FOUND` · `400 SELF_REQUEST` · `409 ALREADY_FRIENDS` / `ALREADY_REQUESTED` |
+| `GET /friends` | | `200` data `{ friends, incoming, outgoing, blocked }` |
+| `POST /friends/requests` | `{ "dname": "Beto" }` | `201` data `{ status: "pending" }` · `200` data `{ status: "accepted" }` si Beto ya te había enviado una · `404 PLAYER_NOT_FOUND` · `400 SELF_REQUEST` · `409 ALREADY_FRIENDS` / `ALREADY_REQUESTED` · `403 BLOCKED` (uno de los dos bloqueó al otro; no dice quién) |
 | `POST /friends/requests/:id/accept` | | `200` data `{ status: "accepted" }` · `404 REQUEST_NOT_FOUND` |
 | `DELETE /friends/requests/:id` | | `200` (rechazar una recibida o cancelar una enviada) · `404 REQUEST_NOT_FOUND` |
 | `DELETE /friends/:id` | | `200` (deja de ser amigo para los dos) · `404 NOT_FRIENDS` |
 
 - `friends`: `[{ id, dname, level, presence }]`, en línea primero. `presence` (`"playing"`, `"lobby"` u
   `"offline"`) la escribe el servidor de juego en `users`.
-- `incoming` / `outgoing`: `[{ id, dname }]`, solicitudes recibidas y enviadas.
+- `incoming` / `outgoing`: `[{ id, dname }]`, solicitudes recibidas y enviadas. `blocked`: a quién bloqueaste.
+
+### Bloqueos
+
+| Ruta | Respuesta |
+|---|---|
+| `POST /blocks/:id` | `200` · `400 SELF_BLOCK` · `404 PLAYER_NOT_FOUND` |
+| `DELETE /blocks/:id` | `200` · `404 NOT_BLOCKED` |
+
+Bloquear quita la amistad y las solicitudes entre los dos, y mientras dure ninguno puede mandarle solicitud al otro.
+Como solo se invita a amigos, tampoco hay invitaciones. Los mensajes del chat del bloqueado los oculta el frontend.
 
 ### Chat global
 
@@ -146,6 +156,7 @@ src/
       friendships.ts     colección friendships
       schemas.ts         validación del body y del :id
       types.ts           Friendship, Friend, FriendsList
+    blocks/            bloquear y desbloquear (index.ts: rutas; blocks.ts: colección blocks)
     chat/              chat global por WebSocket
       index.ts           GET /chat: entrar, escribir, moderar y repartir los mensajes
       messages.ts        colección chat_messages
