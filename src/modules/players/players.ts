@@ -8,6 +8,29 @@ export async function createPlayer(db: Db, player: Player): Promise<void> {
   await users(db).insertOne(player);
 }
 
+/** Un jugador por id (sin los campos internos del juego que no hacen falta) */
+export function findPlayer(db: Db, id: number) {
+  return users(db).findOne(
+    { id },
+    {
+      projection: {
+        _id: 0,
+        id: 1,
+        dname: 1,
+        level: 1,
+        wins: 1,
+        losses: 1,
+        gamecount: 1,
+        presence: 1,
+        ownedPets: 1,
+      },
+    },
+  ) as Promise<Pick<
+    Player,
+    "id" | "dname" | "level" | "wins" | "losses" | "gamecount" | "presence" | "ownedPets"
+  > | null>;
+}
+
 /** Lo básico de varios jugadores (nombre, nivel, dónde están), por id */
 export function findPlayers(db: Db, ids: number[]) {
   return users(db)

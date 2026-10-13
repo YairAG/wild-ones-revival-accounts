@@ -67,6 +67,16 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
   `"offline"`) la escribe el servidor de juego en `users`.
 - `incoming` / `outgoing`: `[{ id, dname }]`, solicitudes recibidas y enviadas. `blocked`: a quién bloqueaste.
 
+### Perfil de jugador
+
+| Ruta | Respuesta |
+|---|---|
+| `GET /players/:id` | `200` data `{ id, dname, level, wins, losses, gamecount, presence, pets, mutualFriends, relation, blocked }` · `404 PLAYER_NOT_FOUND` |
+
+- `pets`: `[{ name, type }]`. `mutualFriends`: cuántos amigos tienen en común.
+- `relation`, vista desde quien pide: `"self"`, `"friends"`, `"outgoing"` (le enviaste solicitud), `"incoming"` o `"none"`.
+- `blocked`: si tú lo bloqueaste (nunca dice si él te bloqueó a ti).
+
 ### Bloqueos
 
 | Ruta | Respuesta |
@@ -145,6 +155,7 @@ src/
       schemas.ts         validación del body
       types.ts           Account, Session
     players/           el jugador del juego
+      index.ts           GET /players/:id (perfil)
       new-player.ts      jugador inicial: los valores iniciales se ajustan aquí
       players.ts         colección users
       types.ts           Player, Pet, Presence

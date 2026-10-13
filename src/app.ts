@@ -12,6 +12,7 @@ import { authModule } from "./modules/auth";
 import { blocksModule } from "./modules/blocks";
 import { chatModule } from "./modules/chat";
 import { friendsModule } from "./modules/friends";
+import { playersModule } from "./modules/players";
 
 export async function buildApp(db: Db, config: Config) {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || "info" } });
@@ -46,6 +47,7 @@ export async function buildApp(db: Db, config: Config) {
   // Módulos
   authModule(app, { db, config });
   friendsModule(app, { db, config });
+  playersModule(app, { db, config });
   blocksModule(app, { db, config });
   chatModule(app, { db, config });
 

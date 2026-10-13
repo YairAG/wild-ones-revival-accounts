@@ -18,6 +18,11 @@ export async function removeBlock(db: Db, from: number, to: number): Promise<boo
   return (await blocks(db).deleteOne({ from, to })).deletedCount === 1;
 }
 
+/** ¿`from` bloqueó a `to`? */
+export async function hasBlocked(db: Db, from: number, to: number): Promise<boolean> {
+  return (await blocks(db).findOne({ from, to })) !== null;
+}
+
 /** ¿Alguno de los dos bloqueó al otro? */
 export async function blockedEitherWay(db: Db, a: number, b: number): Promise<boolean> {
   const block = await blocks(db).findOne({

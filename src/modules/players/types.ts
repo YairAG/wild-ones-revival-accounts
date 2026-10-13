@@ -47,5 +47,23 @@ export type Player = {
   presence?: Presence; // la escribe el servidor de juego; si no existe, nunca se ha conectado
 };
 
+/** Qué relación tienes con un jugador, vista desde ti */
+export type Relation = "self" | "friends" | "outgoing" | "incoming" | "none"; // outgoing: le enviaste solicitud
+
+/** Perfil de un jugador (GET /players/:id) */
+export type PlayerProfile = {
+  id: number;
+  dname: string;
+  level: number;
+  wins: number;
+  losses: number;
+  gamecount: number; // partidas jugadas
+  presence: Presence;
+  pets: { name: string; type: string }[];
+  mutualFriends: number; // amigos en común
+  relation: Relation;
+  blocked: boolean; // si tú lo bloqueaste
+};
+
 /** Dónde está el jugador ahora (lo actualiza el servidor de juego, ver docs/CUENTAS.md en Wild-Ones-Revival) */
 export type Presence = "playing" | "lobby" | "offline";
