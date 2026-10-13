@@ -40,6 +40,31 @@ Piden sesión: el mismo `token`, en `Authorization: Bearer <token>` (`401` si fa
   `"offline"`) la escribe el servidor de juego en `users`.
 - `incoming` / `outgoing`: `[{ id, dname }]`, solicitudes recibidas y enviadas.
 
+### Chat global
+
+WebSocket en `GET /chat` (`ws://localhost:3000/chat`). Cada mensaje es un JSON. El primero que manda el
+cliente es el token (no va en la URL para que no quede en los logs):
+
+| Cliente → servidor | Para qué |
+|---|---|
+| `{ "type": "auth", "token": "..." }` | Entrar. Responde `history`, o `error` y cierra si el token no sirve |
+| `{ "type": "send", "text": "hola" }` | Escribir: 1 a 200 caracteres, uno cada 2 s por jugador |
+| `{ "type": "delete", "id": "..." }` | Moderadores: borrar un mensaje |
+| `{ "type": "mute", "userId": 3, "minutes": 60 }` | Moderadores: silenciar a un jugador (máximo una semana) |
+
+| Servidor → cliente | Cuándo |
+|---|---|
+| `{ "type": "history", "messages": [...], "mod": false }` | Al entrar: los últimos 50 mensajes y si puedes moderar |
+| `{ "type": "message", "message": { id, userId, dname, text, at } }` | Alguien escribió (le llega a todos) |
+| `{ "type": "deleted", "id": "..." }` | Un moderador borró un mensaje (a todos) |
+| `{ "type": "notice", "text": "..." }` | Aviso solo para ti (p. ej. al silenciar) |
+| `{ "type": "error", "error": "..." }` | Algo que mandaste no se pudo |
+
+- Las groserías de la lista de `src/modules/chat/filter.ts` se reemplazan por `***` antes de guardar.
+- Los mensajes se guardan en la colección `chat_messages`.
+- Hacer moderador a alguien (en `mongosh`): `db.accounts.updateOne({ dname: "Ana" }, { $set: { role: "mod" } })`.
+  Toma efecto la próxima vez que entre al chat.
+
 ## Estructura
 
 Organizado **por funcionalidad**: cada carpeta de `src/modules/` tiene todo lo de una función (rutas,
@@ -76,6 +101,12 @@ src/
       friendships.ts     colección friendships
       schemas.ts         validación del body y del :id
       types.ts           Friendship, Friend, FriendsList
+    chat/              chat global por WebSocket
+      index.ts           GET /chat: entrar, escribir, moderar y repartir los mensajes
+      messages.ts        colección chat_messages
+      filter.ts          filtro de groserías
+      schemas.ts         validación de lo que manda el cliente
+      types.ts           ChatMessage, ChatServerEvent
 test/                  tests (helpers/setup.ts arranca la app con un Mongo temporal)
 ```
 
