@@ -15,6 +15,7 @@ async function createIndexes(db: Db): Promise<void> {
   await db
     .collection("accounts")
     .createIndex({ dname: 1 }, { unique: true, collation: ignoreCase });
+  await db.collection("accounts").createIndex({ userId: 1 }, { unique: true }); // el chat busca por id
   await db.collection("users").createIndex({ id: 1 }, { unique: true });
   await db.collection("users").createIndex({ dname: 1 }, { unique: true });
   // Amigos: una relación por pareja, y búsqueda por quien envía o recibe

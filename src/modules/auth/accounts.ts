@@ -16,6 +16,10 @@ export async function createAccount(db: Db, account: Account): Promise<boolean> 
   }
 }
 
+export function findAccountById(db: Db, userId: number): Promise<Account | null> {
+  return accounts(db).findOne({ userId });
+}
+
 /** Busca por nombre sin importar mayúsculas */
 export function findAccountByName(db: Db, dname: string): Promise<Account | null> {
   return accounts(db).findOne({ dname }, { collation: ignoreCase });
