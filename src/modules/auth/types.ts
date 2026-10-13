@@ -6,6 +6,8 @@ export type Account = {
   dname: string;
   passwordHash: string; // "salt:hash" de scrypt
   createdAt: Date;
+  email?: string; // en minúsculas; para recuperar la cuenta (aún sin verificar). Las cuentas viejas no lo tienen
+  termsAcceptedAt?: Date; // cuándo aceptó las reglas, la privacidad y los términos al registrarse
   role?: "mod"; // moderador del chat. Se da a mano en Mongo (ver README)
   mutedUntil?: Date; // silenciado en el chat hasta esta fecha
   dmPolicy?: DmPolicy; // quién puede escribirle en privado; sin el campo, "friends"

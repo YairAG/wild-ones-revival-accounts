@@ -2,7 +2,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
-import { startTestApp, testConfig, type TestApp } from "./helpers/setup";
+import { startTestApp, testConfig, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 before(async () => (t = await startTestApp()));
@@ -17,7 +17,7 @@ function gameServerVerify(token: string): number {
 }
 
 test("registro: crea la cuenta y el jugador, y devuelve un token válido para el servidor de juego", async () => {
-  const res = await t.post("/register", { dname: "Ana", password: "clave-segura" });
+  const res = await t.post("/register", { ...signup, dname: "Ana", password: "clave-segura" });
   assert.equal(res.statusCode, 201);
   const body = res.json();
   assert.equal(body.ok, true);
@@ -38,15 +38,20 @@ test("registro: crea la cuenta y el jugador, y devuelve un token válido para el
   // La contraseña solo está como hash, en accounts
   const account = await t.db.collection("accounts").findOne({ userId: 1 });
   assert.match(account?.passwordHash, /^[0-9a-f]{32}:[0-9a-f]{128}$/);
+  // El correo (en minúsculas) y cuándo aceptó las reglas, también solo en accounts
+  assert.equal(account?.email, "prueba@example.com");
+  assert.ok(account?.termsAcceptedAt instanceof Date);
+  assert.equal(user?.email, undefined);
 });
 
 test("registro: ids consecutivos y nombres únicos sin importar mayúsculas", async () => {
   assert.equal(
-    (await t.post("/register", { dname: "Beto", password: "clave-segura" })).json().data.id,
+    (await t.post("/register", { ...signup, dname: "Beto", password: "clave-segura" })).json().data
+      .id,
     2,
   );
 
-  const dup = await t.post("/register", { dname: "ana", password: "otra-clave-123" });
+  const dup = await t.post("/register", { ...signup, dname: "ana", password: "otra-clave-123" });
   assert.equal(dup.statusCode, 409);
   assert.deepEqual(dup.json(), {
     ok: false,
@@ -57,7 +62,7 @@ test("registro: ids consecutivos y nombres únicos sin importar mayúsculas", as
 });
 
 test("registro: datos inválidos dan 400 con un mensaje para mostrar", async () => {
-  const short = await t.post("/register", { dname: "Caro", password: "corta" });
+  const short = await t.post("/register", { ...signup, dname: "Caro", password: "corta" });
   assert.equal(short.statusCode, 400);
   assert.deepEqual(short.json(), {
     ok: false,
@@ -67,14 +72,46 @@ test("registro: datos inválidos dan 400 con un mensaje para mostrar", async () 
   });
 
   assert.equal(
-    (await t.post("/register", { dname: "a", password: "clave-segura" })).statusCode,
+    (await t.post("/register", { ...signup, dname: "a", password: "clave-segura" })).statusCode,
     400,
   );
   assert.equal(
-    (await t.post("/register", { dname: "con espacio", password: "clave-segura" })).statusCode,
+    (await t.post("/register", { ...signup, dname: "con espacio", password: "clave-segura" }))
+      .statusCode,
     400,
   );
   assert.equal((await t.post("/register", {})).statusCode, 400);
+
+  // Sin aceptar las reglas o con un correo mal escrito: tampoco
+  const noTerms = await t.post("/register", {
+    ...signup,
+    acceptTerms: false,
+    dname: "Caro",
+    password: "clave-segura",
+  });
+  assert.equal(noTerms.statusCode, 400);
+  assert.equal(
+    noTerms.json().message,
+    "Tienes que aceptar las reglas, la privacidad y los términos",
+  );
+  const badEmail = await t.post("/register", {
+    ...signup,
+    email: "no-es-correo",
+    dname: "Caro",
+    password: "clave-segura",
+  });
+  assert.equal(badEmail.json().message, "Escribe un correo válido");
+});
+
+test("registro: el correo se guarda en minúsculas", async () => {
+  await t.post("/register", {
+    ...signup,
+    email: "Mia@Example.COM",
+    dname: "Mia",
+    password: "clave-segura",
+  });
+  const account = await t.db.collection("accounts").findOne({ dname: "Mia" });
+  assert.equal(account?.email, "mia@example.com");
 });
 
 test("nombre disponible: mismas reglas que el registro, sin importar mayúsculas", async () => {

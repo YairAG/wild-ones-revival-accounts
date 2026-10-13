@@ -2,12 +2,12 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
-import { startTestApp, testConfig, type TestApp } from "./helpers/setup";
+import { startTestApp, testConfig, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 before(async () => {
   t = await startTestApp();
-  await t.post("/register", { dname: "Ana", password: "clave-segura" });
+  await t.post("/register", { ...signup, dname: "Ana", password: "clave-segura" });
 });
 after(() => t?.stop());
 

@@ -11,19 +11,22 @@ import { newPlayer } from "../players/new-player";
 import { createPlayer } from "../players/players";
 import { createAccount, findAccountByName } from "./accounts";
 import { hashPassword } from "./password";
-import { credentialsSchema } from "./schemas";
+import { credentialsSchema, registerSchema } from "./schemas";
 import { startSession } from "./session-cookie";
 
 export function registerRoute(app: FastifyInstance, { db, config }: ModuleDeps): void {
   app.post("/register", attemptsLimit(config), async (req, reply) => {
-    const { dname, password } = parseBody(credentialsSchema, req.body);
+    const { dname, password, email } = parseBody(registerSchema, req.body);
 
     const id = await nextId(db, "userId");
+    const now = new Date();
     const created = await createAccount(db, {
       userId: id,
       dname,
       passwordHash: await hashPassword(password),
-      createdAt: new Date(),
+      createdAt: now,
+      email,
+      termsAcceptedAt: now,
     });
     if (!created) throw new AppError(409, "NAME_TAKEN", "Ese nombre ya existe");
 

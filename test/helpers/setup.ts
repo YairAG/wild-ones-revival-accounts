@@ -17,6 +17,9 @@ export const testConfig: Config = {
   requestsPerMinute: 1000,
 };
 
+/** Lo que /register pide además del nombre y la contraseña (correo inventado) */
+export const signup = { email: "prueba@example.com", acceptTerms: true };
+
 export async function startTestApp(overrides: Partial<Config> = {}) {
   const mongod = await MongoMemoryServer.create({
     binary: { version: process.env.MONGO_VERSION || "9.0.2" },

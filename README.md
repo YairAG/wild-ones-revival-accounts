@@ -30,7 +30,7 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 
 | Ruta | Body | Respuesta |
 |---|---|---|
-| `POST /register` | `{ "dname": "Ana", "password": "..." }` | `201` data `{ id, dname, token }` · `400` · `409 NAME_TAKEN` |
+| `POST /register` | `{ "dname": "Ana", "password": "...", "email": "ana@correo.com", "acceptTerms": true }` | `201` data `{ id, dname, token }` · `400` · `409 NAME_TAKEN` |
 | `GET /register/available?dname=Ana` | | `200` data `{ available }` · `400` (formato no válido) |
 | `POST /login` | `{ "dname": "Ana", "password": "..." }` | `200` data `{ id, dname, token }` · `401 WRONG_CREDENTIALS` (nombre o contraseña) |
 | `POST /refresh` | (cookie) | `200` data `{ id, dname, token }` · `401 SESSION_EXPIRED` |
@@ -38,6 +38,8 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 
 - `dname`: 3 a 16 letras, números o `_`. Único sin importar mayúsculas ("Ana" = "ana").
 - `password`: mínimo 8 caracteres.
+- `email` (solo en el registro): se guarda en minúsculas en `accounts`, sin verificar todavía (para recuperar la
+  cuenta). `acceptTerms` tiene que ser `true`: reglas, privacidad y términos; se guarda la fecha (`termsAcceptedAt`).
 - Límite (solo en estas dos rutas): `REQUESTS_PER_MINUTE` intentos por minuto y por IP (`429` si se pasa).
 - El `token` se manda al servidor de juego: `{"command":"logIn","token":"<token>"}`.
 

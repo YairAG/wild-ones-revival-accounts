@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { WebSocket } from "ws";
-import { startTestApp, type TestApp } from "./helpers/setup";
+import { startTestApp, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 const token: Record<string, string> = {};
@@ -49,7 +49,9 @@ before(async () => {
   t = await startTestApp();
   await t.app.ready();
   for (const dname of ["Ana", "Beto", "Caro"]) {
-    const session = (await t.post("/register", { dname, password: "clave-segura" })).json().data;
+    const session = (
+      await t.post("/register", { ...signup, dname, password: "clave-segura" })
+    ).json().data;
     token[dname] = session.token;
     id[dname] = session.id;
   }

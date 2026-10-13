@@ -1,7 +1,7 @@
 // Amigos: solicitudes, aceptar/rechazar, lista con presencia y eliminar. Datos inventados.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startTestApp, type TestApp } from "./helpers/setup";
+import { startTestApp, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 const token: Record<string, string> = {}; // sesión de cada jugador
@@ -10,7 +10,9 @@ const id: Record<string, number> = {};
 before(async () => {
   t = await startTestApp();
   for (const dname of ["Ana", "Beto", "Caro", "Dani"]) {
-    const session = (await t.post("/register", { dname, password: "clave-segura" })).json().data;
+    const session = (
+      await t.post("/register", { ...signup, dname, password: "clave-segura" })
+    ).json().data;
     token[dname] = session.token;
     id[dname] = session.id;
   }
@@ -152,7 +154,7 @@ test("eliminar un amigo lo quita para los dos", async () => {
 test("las rutas de amigos no tienen el límite de intentos del login", async () => {
   const limited = await startTestApp({ requestsPerMinute: 2 });
   const { token: ana } = (
-    await limited.post("/register", { dname: "Ana", password: "clave-segura" })
+    await limited.post("/register", { ...signup, dname: "Ana", password: "clave-segura" })
   ).json().data;
   const codes = [];
   for (let i = 0; i < 5; i++) codes.push((await limited.call("GET", "/friends", ana)).statusCode);

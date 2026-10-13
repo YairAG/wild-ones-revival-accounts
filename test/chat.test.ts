@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import type { WebSocket } from "ws";
 import { filterText } from "../src/modules/chat/filter";
 import type { ChatMessage } from "../src/modules/chat/types";
-import { startTestApp, type TestApp } from "./helpers/setup";
+import { startTestApp, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 const token: Record<string, string> = {};
@@ -14,7 +14,7 @@ before(async () => {
   await t.app.ready();
   for (const dname of ["Ana", "Beto", "Moni", "Dani"]) {
     token[dname] = (
-      await t.post("/register", { dname, password: "clave-segura" })
+      await t.post("/register", { ...signup, dname, password: "clave-segura" })
     ).json().data.token;
   }
   await t.db.collection("accounts").updateOne({ dname: "Moni" }, { $set: { role: "mod" } });

@@ -10,6 +10,12 @@ export const credentialsSchema = z.object({
 
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+// Body de /register: además, el correo (para recuperar la cuenta) y aceptar las reglas
+export const registerSchema = credentialsSchema.extend({
+  email: z.email("Escribe un correo válido").max(254).toLowerCase(),
+  acceptTerms: z.literal(true, "Tienes que aceptar las reglas, la privacidad y los términos"),
+});
+
 // Body de POST /account/password
 export const changePasswordSchema = z.object({
   current: z.string().min(1, "Escribe tu contraseña actual"),

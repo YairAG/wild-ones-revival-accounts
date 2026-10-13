@@ -1,7 +1,7 @@
 // Perfil de jugador: estadísticas, mascotas, amigos en común y tu relación con él. Datos inventados.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startTestApp, type TestApp } from "./helpers/setup";
+import { startTestApp, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 const token: Record<string, string> = {};
@@ -10,7 +10,9 @@ const id: Record<string, number> = {};
 before(async () => {
   t = await startTestApp();
   for (const dname of ["Ana", "Beto", "Caro", "Dani"]) {
-    const session = (await t.post("/register", { dname, password: "clave-segura" })).json().data;
+    const session = (
+      await t.post("/register", { ...signup, dname, password: "clave-segura" })
+    ).json().data;
     token[dname] = session.token;
     id[dname] = session.id;
   }

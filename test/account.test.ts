@@ -1,7 +1,7 @@
 // Tu cuenta: cambiar contraseña, cerrar las otras sesiones y eliminar la cuenta. Datos inventados.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startTestApp, type TestApp } from "./helpers/setup";
+import { startTestApp, type TestApp, signup } from "./helpers/setup";
 
 let t: TestApp;
 before(async () => (t = await startTestApp()));
@@ -32,7 +32,7 @@ const refreshWorks = async (cookie: string) =>
     .statusCode === 200;
 
 test("cambiar contraseña: pide la actual y cierra las otras sesiones (esta sigue)", async () => {
-  await t.post("/register", { dname: "Ana", password: "clave-vieja-1" });
+  await t.post("/register", { ...signup, dname: "Ana", password: "clave-vieja-1" });
   const here = await login("Ana", "clave-vieja-1");
   const other = await login("Ana", "clave-vieja-1");
 
@@ -66,7 +66,7 @@ test("cambiar contraseña: pide la actual y cierra las otras sesiones (esta sigu
 });
 
 test("cerrar sesión en otros equipos", async () => {
-  await t.post("/register", { dname: "Beto", password: "clave-segura" });
+  await t.post("/register", { ...signup, dname: "Beto", password: "clave-segura" });
   const here = await login("Beto", "clave-segura");
   const other = await login("Beto", "clave-segura");
   const res = await withCookie("POST", "/account/logout-others", here.token, here.cookie);
@@ -79,8 +79,12 @@ test("cerrar sesión en otros equipos", async () => {
 });
 
 test("eliminar cuenta: pide la contraseña y borra todo lo del jugador", async () => {
-  const caro = (await t.post("/register", { dname: "Caro", password: "clave-segura" })).json().data;
-  const dani = (await t.post("/register", { dname: "Dani", password: "clave-segura" })).json().data;
+  const caro = (
+    await t.post("/register", { ...signup, dname: "Caro", password: "clave-segura" })
+  ).json().data;
+  const dani = (
+    await t.post("/register", { ...signup, dname: "Dani", password: "clave-segura" })
+  ).json().data;
   await t.call("POST", "/friends/requests", caro.token, { dname: "Dani" });
   await t.call("POST", `/blocks/${caro.id}`, dani.token); // Dani bloqueó a Caro
   await t.db
@@ -115,7 +119,7 @@ test("eliminar cuenta: pide la contraseña y borra todo lo del jugador", async (
   );
   // El nombre queda libre
   assert.equal(
-    (await t.post("/register", { dname: "Caro", password: "otra-clave-1" })).statusCode,
+    (await t.post("/register", { ...signup, dname: "Caro", password: "otra-clave-1" })).statusCode,
     201,
   );
 });
