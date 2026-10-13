@@ -16,6 +16,11 @@ export const changePasswordSchema = z.object({
   next: credentialsSchema.shape.password,
 });
 
+// Body de POST /account/privacy
+export const privacySchema = z.object({
+  dmPolicy: z.enum(["friends", "everyone", "nobody"], "Opción no válida"),
+});
+
 // Body de DELETE /account: se confirma con la contraseña
 export const deleteAccountSchema = z.object({
   password: z.string().min(1, "Escribe tu contraseña para confirmar"),

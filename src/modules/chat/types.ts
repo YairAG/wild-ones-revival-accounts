@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { Failure, Success } from "../../shared/response";
+import type { DirectMessage } from "../dms/types";
 import type { OpenReport } from "../reports/types";
 
 /** Mensaje guardado (colección "chat_messages") */
@@ -52,6 +53,7 @@ export type ChatServerEvent =
   | { type: "history"; messages: ChatMessage[]; mod: boolean }
   | { type: "message"; message: ChatMessage } // alguien escribió
   | { type: "deleted"; id: string } // un moderador borró un mensaje
+  | { type: "dm"; message: DirectMessage } // privado nuevo (a quien lo manda y a quien lo recibe)
   // Avisos y errores solo para ti, con el formato de todas las respuestas (shared/response.ts)
   | ({ type: "notice" } & Success) // "Beto silenciado 1 h"
   | ({ type: "error" } & Failure); // "Espera un momento antes de mandar otro mensaje"

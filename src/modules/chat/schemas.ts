@@ -3,17 +3,17 @@ import { z } from "zod";
 
 export const MAX_LENGTH = 200;
 
+const text = z
+  .string()
+  .trim()
+  .min(1, "Escribe un mensaje")
+  .max(MAX_LENGTH, `Máximo ${MAX_LENGTH} caracteres`);
+
 export const clientMessageSchema = z.discriminatedUnion("type", [
   // Primer mensaje: el token del login
   z.object({ type: z.literal("auth"), token: z.string() }),
-  z.object({
-    type: z.literal("send"),
-    text: z
-      .string()
-      .trim()
-      .min(1, "Escribe un mensaje")
-      .max(MAX_LENGTH, `Máximo ${MAX_LENGTH} caracteres`),
-  }),
+  z.object({ type: z.literal("send"), text }), // al chat global
+  z.object({ type: z.literal("dm"), to: z.number().int().positive(), text }), // privado al jugador `to`
   // Solo moderadores
   z.object({ type: z.literal("delete"), id: z.string() }),
   z.object({

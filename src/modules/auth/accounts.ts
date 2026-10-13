@@ -1,6 +1,7 @@
 // Colección "accounts": credenciales.
 import type { Db } from "mongodb";
 import { ignoreCase } from "../../db/mongo";
+import type { DmPolicy } from "../dms/types";
 import type { Account } from "./types";
 
 const accounts = (db: Db) => db.collection<Account>("accounts");
@@ -48,6 +49,10 @@ export function findAccountByName(db: Db, dname: string): Promise<Account | null
 
 export async function setPasswordHash(db: Db, userId: number, passwordHash: string): Promise<void> {
   await accounts(db).updateOne({ userId }, { $set: { passwordHash } });
+}
+
+export async function setDmPolicy(db: Db, userId: number, dmPolicy: DmPolicy): Promise<void> {
+  await accounts(db).updateOne({ userId }, { $set: { dmPolicy } });
 }
 
 export async function deleteAccount(db: Db, userId: number): Promise<void> {

@@ -10,6 +10,7 @@ import { parseBody } from "../../shared/validation";
 import { findAccountById } from "../auth/accounts";
 import { requireUser } from "../auth/require-user";
 import { findMessage } from "../chat/messages";
+import { findDmFromTo } from "../dms/direct-messages";
 import { requireMod } from "../chat/moderation";
 import { logAction } from "../chat/moderation-log";
 import { hasOpenReport, resolveReport, saveReport } from "./reports";
@@ -30,13 +31,14 @@ export function reportsModule(app: FastifyInstance, { db, config }: ModuleDeps):
       throw new AppError(409, "ALREADY_REPORTED", "Ya reportaste a este jugador");
     }
 
-    // El mensaje se toma de la base (así no se puede inventar) y tiene que ser del reportado
+    // El mensaje se toma de la base (así no se puede inventar) y tiene que ser del reportado: del chat global
+    // o un privado que te mandó a ti
     let message;
     if (messageId) {
-      const stored = await findMessage(db, messageId);
-      if (stored?.userId !== targetId) {
-        throw new AppError(404, "MESSAGE_NOT_FOUND", "Ese mensaje ya no existe");
-      }
+      const inChat = await findMessage(db, messageId);
+      const stored =
+        inChat?.userId === targetId ? inChat : await findDmFromTo(db, messageId, targetId, me);
+      if (!stored) throw new AppError(404, "MESSAGE_NOT_FOUND", "Ese mensaje ya no existe");
       message = { id: messageId, text: stored.original ?? stored.text, at: stored.createdAt };
     }
 

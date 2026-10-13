@@ -1,4 +1,6 @@
 // Tu cuenta (con sesión). Las que piden contraseña tienen el límite de intentos, como el login:
+//   GET    /account               tus ajustes de la cuenta: { dname, dmPolicy }
+//   POST   /account/privacy       quién puede escribirte en privado { dmPolicy: "friends" | "everyone" | "nobody" }
 //   POST   /account/password      cambiar contraseña { current, next }; cierra tus otras sesiones
 //   POST   /account/logout-others cerrar sesión en los demás navegadores (este sigue)
 //   DELETE /account               eliminar la cuenta { password }: borra todo lo del jugador
@@ -10,13 +12,14 @@ import { respond } from "../../shared/response";
 import { parseBody } from "../../shared/validation";
 import { removeAllBlocksFor } from "../blocks/blocks";
 import { deleteMessagesBy } from "../chat/messages";
+import { deleteDmsOf } from "../dms/direct-messages";
 import { removeAllFor } from "../friends/friendships";
 import { deletePlayer } from "../players/players";
-import { deleteAccount, findAccountById, setPasswordHash } from "./accounts";
+import { deleteAccount, findAccountById, setDmPolicy, setPasswordHash } from "./accounts";
 import { attemptsLimit } from "./attempts-limit";
 import { hashPassword, verifyPassword } from "./password";
 import { requireUser } from "./require-user";
-import { changePasswordSchema, deleteAccountSchema } from "./schemas";
+import { changePasswordSchema, deleteAccountSchema, privacySchema } from "./schemas";
 import { clearSessionCookie, readSessionCookie } from "./session-cookie";
 import { deleteOtherSessions } from "./sessions";
 import type { Account } from "./types";
@@ -33,6 +36,22 @@ async function confirmPassword(db: Db, userId: number, password: string): Promis
 const thisBrowser = (req: FastifyRequest) => readSessionCookie(req);
 
 export function accountRoutes(app: FastifyInstance, { db, config }: ModuleDeps): void {
+  app.get("/account", async (req, reply) => {
+    const account = await findAccountById(db, requireUser(req, config));
+    if (!account) throw new AppError(401, "SESSION_EXPIRED", "Tu sesión expiró, vuelve a entrar");
+    return respond(reply, 200, "Tu cuenta", {
+      dname: account.dname,
+      dmPolicy: account.dmPolicy ?? "friends",
+    });
+  });
+
+  app.post("/account/privacy", async (req, reply) => {
+    const me = requireUser(req, config);
+    const { dmPolicy } = parseBody(privacySchema, req.body);
+    await setDmPolicy(db, me, dmPolicy);
+    return respond(reply, 200, "Ajuste guardado");
+  });
+
   app.post("/account/password", attemptsLimit(config), async (req, reply) => {
     const me = requireUser(req, config);
     const { current, next } = parseBody(changePasswordSchema, req.body);
@@ -65,6 +84,7 @@ export function accountRoutes(app: FastifyInstance, { db, config }: ModuleDeps):
       removeAllFor(db, me),
       removeAllBlocksFor(db, me),
       deleteMessagesBy(db, me),
+      deleteDmsOf(db, me),
       deletePlayer(db, me),
       deleteOtherSessions(db, me), // todas, también la de este navegador
     ]);

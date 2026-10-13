@@ -11,6 +11,7 @@ import { failure, type ErrorId } from "./shared/response";
 import { authModule } from "./modules/auth";
 import { blocksModule } from "./modules/blocks";
 import { chatModule } from "./modules/chat";
+import { dmsModule } from "./modules/dms";
 import { friendsModule } from "./modules/friends";
 import { playersModule } from "./modules/players";
 import { reportsModule } from "./modules/reports";
@@ -52,6 +53,7 @@ export async function buildApp(db: Db, config: Config) {
   reportsModule(app, { db, config });
   blocksModule(app, { db, config });
   chatModule(app, { db, config });
+  dmsModule(app, { db, config });
 
   return app;
 }

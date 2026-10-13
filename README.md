@@ -51,17 +51,35 @@ Todas las respuestas (y los avisos y errores del chat) tienen la misma forma:
 - En Mongo (colección `sessions`) solo se guarda el hash sha256 del refresh token; las vencidas se borran solas.
 - El frontend tiene que pedir con `credentials: "include"` para que el navegador mande y guarde la cookie.
 
+### Mensajes privados
+
+Se mandan por el WebSocket del chat (`{ "type": "dm" }`) y se leen por HTTP (con sesión):
+
+| Ruta | Respuesta |
+|---|---|
+| `GET /dms` | `200` data `[{ with, last: { text, at, fromMe }, unread }]`, la más reciente primero |
+| `GET /dms/:id` | `200` data `{ with, messages }` (los últimos 50) y los marca como leídos |
+| `POST /dms/:id/read` | `200` (marca como leídos los que llegan con la conversación abierta) |
+
+- Quién puede escribirte lo decides en `POST /account/privacy`: `"friends"` (por defecto), `"everyone"` o `"nobody"`.
+  Si no se puede, el chat responde `403 DM_NOT_ALLOWED`; con un bloqueo de por medio, `403 BLOCKED`.
+- Se guardan sin fecha de borrado (colección `direct_messages`). Se pueden adjuntar a un reporte, solo si el
+  privado te lo mandaron a ti.
+
 ### Tu cuenta
 
 Piden sesión (`Authorization`); las que piden contraseña tienen el límite de intentos del login.
 
 | Ruta | Body | Respuesta |
 |---|---|---|
+| `GET /account` | | `200` data `{ dname, dmPolicy }` |
+| `POST /account/privacy` | `{ dmPolicy }` | `200` · `400` |
 | `POST /account/password` | `{ current, next }` | `200` (cierra tus otras sesiones; esta sigue) · `403 WRONG_PASSWORD` · `400` |
 | `POST /account/logout-others` | | `200` (cierra la sesión en los demás navegadores) |
 | `DELETE /account` | `{ password }` | `200` · `403 WRONG_PASSWORD` |
 
-Eliminar la cuenta borra la cuenta, el jugador, sus amistades, bloqueos, mensajes del chat y sesiones, y la cookie.
+Eliminar la cuenta borra la cuenta, el jugador, sus amistades, bloqueos, mensajes del chat y privados, sesiones y
+la cookie.
 Los reportes y el registro de moderación se quedan. El nombre queda libre.
 
 ### Amigos
@@ -122,6 +140,7 @@ cliente es el token (no va en la URL para que no quede en los logs):
 |---|---|
 | `{ "type": "auth", "token": "..." }` | Entrar. Responde `history`, o `error` y cierra si el token no sirve |
 | `{ "type": "send", "text": "hola" }` | Escribir: 1 a 200 caracteres, uno cada 2 s por jugador |
+| `{ "type": "dm", "to": 3, "text": "hola" }` | Privado al jugador `to` (mismas reglas; además ver "Mensajes privados") |
 | `{ "type": "delete", "id": "..." }` | Moderadores: borrar un mensaje |
 | `{ "type": "mute", "userId": 3, "minutes": 60, "reason": "spam" }` | Moderadores: silenciar a un jugador (máximo una semana; `reason` opcional) |
 
@@ -130,6 +149,7 @@ cliente es el token (no va en la URL para que no quede en los logs):
 | `{ "type": "history", "messages": [...], "mod": false }` | Al entrar: los últimos 50 mensajes y si puedes moderar |
 | `{ "type": "message", "message": { id, userId, dname, text, at } }` | Alguien escribió (le llega a todos) |
 | `{ "type": "deleted", "id": "..." }` | Un moderador borró un mensaje (a todos) |
+| `{ "type": "dm", "message": { id, from, to, text, at } }` | Privado nuevo, a todas las pestañas de los dos |
 | `{ "type": "notice", "ok": true, "code", "message" }` | Aviso solo para ti (p. ej. al silenciar) |
 | `{ "type": "error", "ok": false, "code", "message", "error" }` | Algo que mandaste no se pudo: `LOGIN_REQUIRED`, `TOO_FAST`, `MUTED`, `NOT_MOD`... |
 
@@ -197,6 +217,7 @@ src/
       types.ts           Friendship, Friend, FriendsList
     blocks/            bloquear y desbloquear (index.ts: rutas; blocks.ts: colección blocks)
     chat/              chat global por WebSocket
+    dms/               mensajes privados (index.ts: rutas; direct-messages.ts: colección; policy.ts: quién puede escribir)
       index.ts           GET /chat: entrar, escribir, moderar y repartir los mensajes
       messages.ts        colección chat_messages
       moderation.ts      rutas del panel de moderación

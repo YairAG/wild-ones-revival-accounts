@@ -27,6 +27,10 @@ async function createIndexes(db: Db): Promise<void> {
   // Reportes: los abiertos (panel de moderación) y si ya reportaste a alguien
   await db.collection("reports").createIndex({ "from.id": 1, "target.id": 1, status: 1 });
   await db.collection("reports").createIndex({ status: 1 });
+  // Privados: por conversación y los no leídos de cada quien
+  await db.collection("direct_messages").createIndex({ pair: 1, _id: -1 });
+  await db.collection("direct_messages").createIndex({ "to.id": 1, read: 1 });
+  await db.collection("direct_messages").createIndex({ "from.id": 1 });
   // Amigos: una relación por pareja, y búsqueda por quien envía o recibe
   await db.collection("friendships").createIndex({ pair: 1 }, { unique: true });
   await db.collection("friendships").createIndex({ from: 1 });

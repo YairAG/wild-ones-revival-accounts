@@ -18,6 +18,7 @@ export type ErrorId =
   | "MUTED" // 403: silenciado en el chat
   | "WRONG_PASSWORD" // 403: la contraseña que confirmó no es la suya
   | "BLOCKED" // 403: uno de los dos bloqueó al otro
+  | "DM_NOT_ALLOWED" // 403: su ajuste no deja que le escribas en privado
   | "NOT_FOUND" // 404: la ruta no existe
   | "PLAYER_NOT_FOUND" // 404
   | "REQUEST_NOT_FOUND" // 404: solicitud de amistad
